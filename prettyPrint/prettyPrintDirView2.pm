@@ -6,12 +6,12 @@ use File::Path;
 
 my $dbh;
 my $fileSth;
-my $fileCommitsSth;
 my $fileAuthorsSth;
+my $fileCommitsSth;
 my $fileTokenCountsSth;
 my $dirSth;
-my $dirCommitsSth;
 my $dirAuthorsSth;
+my $dirCommitsSth;
 my $dirTokenCountsSth;
 
 my $perFileActivityDB = "activity.db";
@@ -33,6 +33,12 @@ sub get_breadcrumbs {
     }
 
     return \@breadcrumbs;
+}
+
+sub get_file_stats {
+    my $filename = shift @_;
+
+    # fetch authors
 }
 
 sub setup_dbi {
@@ -81,22 +87,39 @@ sub prepare_dbi {
         "SELECT SUM(tokens) AS totaltokens FROM $perFileActivityTable WHERE filename=?;"
     );
     $fileAuthorsSth = $dbh->prepare(
-        "SELECT personname, COUNT(DISTINCT originalcid) AS commits, SUM(tokens) AS tokens,
-        COALESCE((CAST(SUM(tokens) AS float)/CAST((SELECT SUM(tokens) FROM $perFileActivityTable
-        WHERE filename=?) AS float))), 0) AS tokenpercent FROM $perFileActivityTable WHERE
-        filename=? GROUP BY personid ORDER BY tokens DESC;"
+        "SELECT personname, SUM(tokens) AS tokens, COALESCE(CAST(SUM(tokens) AS float) /
+        NULLIF(CAST((SELECT SUM(tokens) FROM $perFileActivityTable WHERE filename=?) AS float)
+        , 0), 0) AS token_proportion, COUNT(DISTINCT originalcid) AS commits, COALESCE(
+        CAST(COUNT(DISTINCT originalcid) AS float) / NULLIF(CAST((SELECT COUNT(DISTINCT
+        originalcid) FROM $perFileActivityTable WHERE filename=?) AS float), 0), 0) AS
+        commit_proportion FROM $perFileActivityTable WHERE filename=? GROUP BY personid
+        ORDER BY tokens DESC;"
+    ); # personname|tokens|token_proportion|commits|commit_proportion
+    $fileCommitsSth = $dbh->prepare(
+        "SELECT DISTINCT originalcid, autdate FROM $perFileActivityTable WHERE filename=?;"
     );
 
     $dirSth = $dbh->prepare(
-        "SELECT * FROM $perFileActivityTable where filename like '?%' and filename not
-        like '?%/%';"
-    );
+        "SELECT * FROM $perFileActivityTable WHERE filename LIKE ? AND filename NOT
+        LIKE ?;"
+    ); # like 'compat/%' and not like 'compat/%/%'
     $dirTokenCountsSth = $dbh->prepare(
-        "SELECT sum(tokens) FROM $perFileActivityTable where filename
-        like '?%' and filename not like '?%/%';"
+        "SELECT SUM(tokens) FROM $perFileActivityTable WHERE filename
+        LIKE ? AND filename NOT LIKE ?;"
     );
     $dirAuthorsSth = $dbh->prepare(
-        ""
+        "SELECT personname, SUM(tokens) AS tokens, COALESCE(CAST(SUM(tokens) AS float) /
+        NULLIF(CAST((SELECT SUM(tokens) FROM $perFileActivityTable WHERE filename LIKE ?
+        AND filename NOT LIKE ?) AS float) , 0), 0) AS token_proportion, COUNT(DISTINCT
+        originalcid) AS commits, COALESCE( CAST(COUNT(DISTINCT originalcid) AS float) /
+        NULLIF(CAST((SELECT COUNT(DISTINCT originalcid) FROM $perFileActivityTable WHERE
+        filename LIKE ? AND filename NOT LIKE ?) AS float), 0), 0) AS commit_proportion
+        FROM $perFileActivityTable WHERE filename LIKE ? AND filename NOT LIKE ? GROUP
+        BY personid ORDER BY tokens DESC;"
+    );
+    $dirCommitsSth = $dbh->prepare(
+        "SELECT DISTINCT originalcid, autdate FROM $perFileActivityTable WHERE filename
+        LIKE ?;"
     );
 }
 

@@ -105,10 +105,11 @@ sub process_directory {
                 Warning("Missing source file $sourceFile");
                 next;
             }
+            $content = content_object(basename($fileName));
+
+
 
             my $fileLines = `wc -l < $sourceFile;`+0;
-
-            $content = content_object(basename($fileName));
             $content->{contentStats}->{line_counts} = $fileLines;
 
 
