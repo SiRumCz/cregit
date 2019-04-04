@@ -109,14 +109,15 @@ sub get_file_stats {
 
     foreach (@{$commitsMeta}) {
         my @currCommit = @{$_};
-        @currCommit = ("","Unknown", "") unless (scalar @currCommit == 3);
+        @currCommit = ("","Unknown", "Unknown", "", 0) unless (scalar @currCommit == 5);
 
         my $authorName = (! defined $dirAuthorsCached->{@currCommit[1]}) ? "Others" : @currCommit[2];
 
         push (@commits, {
-            cid    => @currCommit[0],
-            author => $authorName,
-            epoch  => str2time(@currCommit[2])
+            cid         => @currCommit[0],
+            author      => $authorName,
+            epoch       => str2time(@currCommit[3]),
+            token_count => @currCommit[4]
         });
     }
 
@@ -209,14 +210,15 @@ sub get_directory_stats {
 
     foreach (@{$commitsMeta}) {
         my @currCommit = @{$_};
-        @currCommit = ("","Unknown", "Unknown", "") unless (scalar @currCommit == 4);
+        @currCommit = ("","Unknown", "Unknown", "", 0) unless (scalar @currCommit == 5);
 
         my $authorName = (! defined $dirAuthorsCached->{@currCommit[1]}) ? "Others" : @currCommit[2];
 
         my $currCommit = {
-            cid    => @currCommit[0],
-            author => $authorName,
-            epoch  => str2time(@currCommit[3])
+            cid         => @currCommit[0],
+            author      => $authorName,
+            epoch       => str2time(@currCommit[3]),
+            token_count => @currCommit[4]
         };
 
         push (@commits, $currCommit);
@@ -228,7 +230,148 @@ sub get_directory_stats {
     $fileStats->{author_counts} = scalar @{$authorsMeta};
     $fileStats->{commit_counts} = scalar @{$commitsMeta};
 
+    @commits = sort { $a->{epoch} <=> $b->{epoch} } @commits;
+
     return ([@authors], [@commits], $fileStats, $dirAuthorsCached);
+}
+
+sub get_subdir_stats {
+    my $dirPath = shift @_;
+    my $dirAuthorsCached = shift @_;
+
+    my $bindingVar = ($dirPath eq "root") ? "%" : substr($dirPath, 5)."/%";
+    my @authors = ();
+    my @commits = ();
+    my $fileStats;
+    my $tokenCounts = 0;
+    my $result;
+
+    # fetch authors
+    $result = $dirAuthorsSth->execute($bindingVar, $bindingVar, $bindingVar);
+    my $authorsMeta = $dirAuthorsSth->fetchall_arrayref;
+
+    if (! defined $result) {
+        Warning("Unable to retrieve authors for [$dirPath]");
+        goto FETCHCOMMITS;
+    }
+
+    my $authorOthers = {
+        id                => 60,
+        color_id          => "Black",
+        name              => "Others",
+        tokens            => 0,
+        token_proportion  => 0.0,
+        commits           => 0,
+        commit_proportion => 0.0
+    };
+    foreach(@{$authorsMeta}) {
+        my @currAuthor = @{$_};
+        @currAuthor = ("","Unknown", 0, 0.0, 0, 0.0) unless (scalar @currAuthor == 6);
+
+        my $currAuthor = {
+            name              => @currAuthor[1],
+            tokens            => @currAuthor[2],
+            token_proportion  => @currAuthor[3],
+            commits           => @currAuthor[4],
+            commit_proportion => @currAuthor[5],
+        };
+
+        if (defined $dirAuthorsCached->{@currAuthor[0]}) {
+            # in rank 60, inherits id and color code
+            $currAuthor->{id} = $dirAuthorsCached->{@currAuthor[0]}->{id};
+            $currAuthor->{color_id} = $dirAuthorsCached->{@currAuthor[0]}->{color_id};
+            $currAuthor->{token_percent} = sprintf("%.2f\%", 100.0*$currAuthor->{token_proportion});
+            $currAuthor->{commit_percent} = sprintf("%.2f\%", 100.0*$currAuthor->{commit_proportion});
+
+            push (@authors, $currAuthor);
+        } else {
+            $authorOthers->{tokens} += $currAuthor->{tokens};
+            $authorOthers->{token_proportion} += $currAuthor->{token_proportion};
+            $authorOthers->{commits} += $currAuthor->{commits};
+            $authorOthers->{commit_proportion} += $currAuthor->{commit_proportion};
+        }
+
+        $tokenCounts += @currAuthor[2];
+    }
+
+    if ($authorOthers->{commits} != 0) {
+        $authorOthers->{token_percent} = sprintf("%.2f\%", 100.0*$authorOthers->{token_proportion});
+        $authorOthers->{commit_percent} = sprintf("%.2f\%", 100.0*$authorOthers->{commit_proportion});
+        push (@authors, $authorOthers);
+    }
+
+    FETCHCOMMITS:
+    # fetch commits
+    $result = $dirCommitsSth->execute($bindingVar);
+    my $commitsMeta = $dirCommitsSth->fetchall_arrayref;
+
+    if (! defined $result) {
+        Warning("Unable to retrieve commits for [$dirPath]");
+        goto GETFILESTATS;
+    }
+
+    foreach (@{$commitsMeta}) {
+        my @currCommit = @{$_};
+        @currCommit = ("","Unknown", "Unknown", "", 0) unless (scalar @currCommit == 5);
+
+        my $authorName = (! defined $dirAuthorsCached->{@currCommit[1]}) ? "Others" : @currCommit[2];
+
+        push (@commits, {
+            cid         => @currCommit[0],
+            author      => $authorName,
+            epoch       => str2time(@currCommit[3]),
+            token_count => @currCommit[4]
+        });
+    }
+
+    GETFILESTATS:
+    # get file stats : token counts, author counts, commit counts
+    $fileStats->{tokens} = $tokenCounts;
+    $fileStats->{author_counts} = scalar @{$authorsMeta};
+    $fileStats->{commit_counts} = scalar @{$commitsMeta};
+
+    return ([@authors], [@commits], $fileStats);
+}
+
+sub commits_to_dategroup {
+    my @commits = @{shift @_};
+    my @authors = @{shift @_};
+
+    my @dateGroups = ();
+    foreach (@commits) {
+        my $commit = $_;
+        my $commitAuthor = $commit->{author};
+        my $commitTokenCount = $commit->{token_count};
+        my ($matchedAuthor) = grep {$commitAuthor eq $_->{name}} @authors;
+
+        if (! defined $matchedAuthor) {
+            PrettyPrint::Error("author $commitAuthor not found. \n");
+        }
+
+        my $commitAuthorId = $matchedAuthor->{id};
+        my $commitDate = time2str("%Y-%m-01 00:00:00", $commit->{epoch});
+        my $dateGroupIndex = str2time($commitDate);
+
+        my ($dateGroup) = grep {$dateGroupIndex eq $_->{timestamp}} @dateGroups;
+
+        # create this date group if not defined
+        push (@dateGroups, {timestr => time2str("%B %Y", $dateGroupIndex), timestamp => $dateGroupIndex, group => undef, total_tokens => 0}) if ! defined $dateGroup;
+
+        my ($targetDateGroup) = grep {$dateGroupIndex eq $_->{timestamp}} @dateGroups;
+        my ($groupWithAuthorId) = grep {$commitAuthorId eq $_->{author_id}} @{$targetDateGroup->{group}};
+
+        if (! defined $groupWithAuthorId) {
+            push (@{$targetDateGroup->{group}}, {
+                author_id => $commitAuthorId,
+                token_count => $commitTokenCount
+            });
+        } else {
+            $groupWithAuthorId->{token_count} += $commitTokenCount;
+        }
+        $targetDateGroup->{total_tokens} += $commitTokenCount;
+    }
+
+    return [@dateGroups];
 }
 
 sub setup_dbi {
@@ -280,8 +423,8 @@ sub prepare_dbi {
         ORDER BY tokens DESC;"
     ); # personid|personname|tokens|token_proportion|commits|commit_proportion
     $fileCommitsSth = $dbh->prepare(
-        "SELECT DISTINCT originalcid, personid, personname, autdate FROM $perFileActivityTable
-        WHERE filename=?;"
+        "SELECT originalcid, personid, personname, autdate, SUM(tokens) AS tokens FROM
+        $perFileActivityTable WHERE filename=? GROUP BY originalcid;"
     );
 
     $dirAuthorsSth = $dbh->prepare(
@@ -293,8 +436,8 @@ sub prepare_dbi {
         $perFileActivityTable WHERE filename LIKE ? GROUP BY personid ORDER BY tokens DESC;"
     );
     $dirCommitsSth = $dbh->prepare(
-        "SELECT DISTINCT originalcid, personid, personname, autdate FROM $perFileActivityTable WHERE
-        filename LIKE ?;"
+        "SELECT originalcid, personid, personname, autdate, SUM(tokens) AS tokens FROM
+        $perFileActivityTable WHERE filename LIKE ? GROUP BY originalcid;"
     );
 }
 

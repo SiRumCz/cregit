@@ -2,6 +2,7 @@
 use strict;
 use File::Basename;
 use Getopt::Long;
+use HTML::Template;
 use Pod::Usage;
 use Storable qw(dclone);
 
@@ -79,9 +80,16 @@ sub process_directory {
     # get directory stats : authors, commits, (token counts, author counts, commit counts), cached data
     my ($authors, $commits, $fileStats, $dirAuthorsCached) = PrettyPrintDirView2::get_directory_stats($breadcrumbsPath);
 
+    $directoryData->{tokens} = $fileStats->{tokens};
+    $directoryData->{authors} = dclone $authors;
+    $directoryData->{commits} = dclone $commits;
+    $directoryData->{author_counts} = $fileStats->{author_counts};
+    $directoryData->{commit_counts} = $fileStats->{commit_counts};
 
     my @dirList = ();
     my @fileList = ();
+    my $tokenLen = 0;
+    my $fileTokenLen = 0;
 
     print "Directory: $breadcrumbsPath \n";
     opendir(my $dh, $dirPath);
@@ -97,12 +105,33 @@ sub process_directory {
 
         if (-d $contentPath) {
             my $dirSourcePath = substr ($contentPath, (length $rootPath)+1);
-            $dirSourcePath = File::Spec->catfile($repoDir, $currContent);
+            $dirSourcePath = File::Spec->catfile($repoDir, $dirSourcePath);
             next if ! -e $dirSourcePath; # skip irrelevant folder(s)
 
             $content = process_directory($rootPath, $contentPath);
-            next unless $content != 1;
+
+            my $contentDirPath = File::Spec->catdir("root/", substr($contentPath, length $rootPath));
+            ($authors, $commits, $fileStats) = PrettyPrintDirView2::get_subdir_stats($contentDirPath, $dirAuthorsCached);
+
+            $content->{tokens} = $fileStats->{tokens};
+            $content->{author_counts} = $fileStats->{author_counts};
+            $content->{commit_counts} = $fileStats->{commit_counts};
+            $content->{url} = "./".basename($contentPath);
+
+            $content->{authors} = dclone $authors;
+            $content->{commits} = dclone $commits;
+
+            my $dateGroups = PrettyPrintDirView2::commits_to_dategroup(\@{$commits}, \@{$authors});
+            my @sortedDateGroup = (defined $dateGroups) ? sort { $a->{timestamp} <=> $b->{timestamp} } @{$dateGroups} : ();
+            $content->{dateGroups} = [@sortedDateGroup];
+
+            # update largest token
+            $tokenLen = ($tokenLen < $content->{tokens}) ? $content->{tokens} : $tokenLen;
+
+            push(@dirList, dclone $content);
+
         } elsif (-f $contentPath and $contentPath =~ /$filter/) {
+            print(++$index . ": $contentPath\n") if $verbose;
 
             my $fileName = substr ($contentPath, (length $rootPath)+1, (length $contentPath)-(length $rootPath)-6);
             my $sourceFile = File::Spec->catfile($repoDir, $fileName);
@@ -120,21 +149,112 @@ sub process_directory {
             $content->{commit_counts} = $fileStats->{commit_counts};
             $content->{line_counts} = $fileLines;
             $content->{file_counts} = '-';
+            $content->{url} = "./".basename($contentPath);
 
-            $content->{authors} = $authors;
-            $content->{commits} = $commits;
+            $content->{authors} = dclone $authors;
+            $content->{commits} = dclone $commits;
 
-            print(++$index . ": $contentPath with $fileLines lines\n") if $verbose;
+            my $dateGroups = PrettyPrintDirView2::commits_to_dategroup(\@{$commits}, \@{$authors});
+            my @sortedDateGroup = (defined $dateGroups) ? sort { $a->{timestamp} <=> $b->{timestamp} } @{$dateGroups} : ();
+            $content->{dateGroups} = [@sortedDateGroup];
+
+            $tokenLen = ($tokenLen < $content->{tokens}) ? $content->{tokens} : $tokenLen;
+            $fileTokenLen = ($fileTokenLen < $content->{tokens}) ? $content->{tokens} : $fileTokenLen;
+
+            push(@fileList, dclone $content);
         }
-
-        $content->{url} = "./".basename($contentPath);
 
         # update line counts and file counts
         $directoryData->{line_counts} += $content->{line_counts};
         $directoryData->{file_counts} += ($content->{file_counts} eq '-') ? 1 : $content->{file_counts};
     }
+
+    my $lengthPercentage;
+    # update content width
+    foreach (@dirList) {
+        my $currDir = $_;
+
+        $lengthPercentage = ($tokenLen == 0) ? 0 : 100.0 * $currDir->{tokens} / $tokenLen;
+        $currDir->{width} = sprintf("%.2f\%", $lengthPercentage);
+
+        foreach (@{$_->{dateGroups}}) {
+            $lengthPercentage = ($currDir->{tokens} == 0) ? 0 : 100.0 * $_->{total_tokens} / $currDir->{tokens};
+            $_->{width} = sprintf("%.2f\%", $lengthPercentage);
+        }
+    }
+
+    foreach (@fileList) {
+        my $currFile = $_;
+
+        $lengthPercentage = ($tokenLen == 0) ? 0 : 100.0 * $currFile->{tokens} / $tokenLen;
+        $currFile->{width} = sprintf("%.2f\%", $lengthPercentage);
+        $lengthPercentage = ($fileTokenLen == 0) ? 0 : 100.0 * $currFile->{tokens} / $fileTokenLen;
+        $currFile->{width_in_files} = sprintf("%.2f\%", $lengthPercentage);
+
+        foreach (@{$_->{dateGroups}}) {
+            $lengthPercentage = ($currFile->{tokens} == 0) ? 0 : 100.0 * $_->{total_tokens} / $currFile->{tokens};
+            $_->{width} = sprintf("%.2f\%", $lengthPercentage);
+        }
+    }
+
+    # print HTML view
+    print_directory($directoryData, \@dirList, \@fileList);
+
     # return the directory data for parent dir to use
     return $directoryData;
+}
+
+sub print_directory {
+    my $directory = shift @_;
+    my @dirList = @{shift @_};
+    my @fileList = @{shift @_};
+
+    my $outputFile = File::Spec->catfile($directory->{path}, "index.html");
+    my ($fileName, $fileDir) = fileparse($outputFile);
+    my $relativePath = File::Spec->abs2rel($outputDir, $fileDir);
+    $webRoot = $relativePath if $webRootRelative;
+    $templateFile = $templateFile ? $templateFile : $defaultTemplate;
+    my @contributorsByName = sort {$a->{name} cmp $b->{name}} @{$directory->{authors}};
+    my @sortedDirList = sort {$a->{name} cmp $b->{name}} @dirList;
+    my @sortedFileList = sort {$a->{name} cmp $b->{name}} @fileList;
+
+    my $template = HTML::Template->new(filename => $templateFile, %$templateParams);
+
+    $template->param(directory_name => $directory->{name});
+    $template->param(web_root => $webRoot);
+    $template->param(breadcrumb_nav => $directory->{breadcrumbs});
+    $template->param(contributors_by_name => \@contributorsByName);
+    $template->param(contributors_count => $directory->{author_counts});
+    $template->param(contributors => $directory->{authors});
+    $template->param(total_tokens => $directory->{tokens});
+    $template->param(total_commits => $directory->{commit_counts});
+    $template->param(has_subdir => scalar @dirList);
+    $template->param(has_file => scalar @fileList);
+    $template->param(directory_list => \@sortedDirList);
+    $template->param(file_list => \@sortedFileList);
+    $template->param(cregit_version => $cregitVersion);
+    $template->param(has_hidden => (scalar @contributorsByName)>20);
+    $template->param(time_min => $directory->{commits}[0]->{epoch});
+    $template->param(time_max => $directory->{commits}[(scalar @{$directory->{commits}})-1]->{epoch});
+
+    my $file = undef;
+
+    if (-f $outputFile and !$overwrite) {
+        print("Output file already exists. Skipping.\n") if $verbose;
+        return 0;
+    }
+
+    if ($outputFile ne "") {
+        open($file, ">", $outputFile) or return PrettyPrint::Error("cannot write to [$outputFile]");
+    } else {
+        $file = *STDOUT;
+    }
+
+    print "\nGenerating directory view of [$directory->{path}]...";
+    print $file $template->output();
+    print ".Done! \n";
+
+    return 0;
 }
 
 sub content_object {
