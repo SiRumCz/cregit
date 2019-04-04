@@ -3,6 +3,7 @@ use strict;
 use File::Basename;
 use Getopt::Long;
 use Pod::Usage;
+use Storable qw(dclone);
 
 use lib dirname(__FILE__);
 use prettyPrintDirView2;
@@ -49,6 +50,7 @@ sub print_dir_info {
 
     PrettyPrintDirView2::setup_dbi($sourceDB, $authorsDB, $blametokensDB, "");
     PrettyPrintDirView2::per_file_activity_dbi() if $dbUpdate; # update per file activity table
+    PrettyPrintDirView2::prepare_dbi();
 
     # filter for c and c++ programming language
     if ($filter_lang eq "c") {
@@ -74,6 +76,10 @@ sub process_directory {
     $directoryData->{breadcrumbs} = $breadcrumbs;
     $directoryData->{path} = $dirPath;
 
+    # get directory stats : authors, commits, (token counts, author counts, commit counts), cached data
+    my ($authors, $commits, $fileStats, $dirAuthorsCached) = PrettyPrintDirView2::get_directory_stats($breadcrumbsPath);
+
+
     my @dirList = ();
     my @fileList = ();
 
@@ -92,7 +98,7 @@ sub process_directory {
         if (-d $contentPath) {
             my $dirSourcePath = substr ($contentPath, (length $rootPath)+1);
             $dirSourcePath = File::Spec->catfile($repoDir, $currContent);
-            next if ! -e $dirSourcePath;
+            next if ! -e $dirSourcePath; # skip irrelevant folder(s)
 
             $content = process_directory($rootPath, $contentPath);
             next unless $content != 1;
@@ -102,52 +108,47 @@ sub process_directory {
             my $sourceFile = File::Spec->catfile($repoDir, $fileName);
 
             if (! -f $sourceFile) {
-                Warning("Missing source file $sourceFile");
+                $warningCount += PrettyPrintDirView2::Warning("Missing source file $sourceFile");
                 next;
             }
             $content = content_object(basename($fileName));
-
-
+            ($authors, $commits, $fileStats) = PrettyPrintDirView2::get_file_stats($fileName, $dirAuthorsCached);
 
             my $fileLines = `wc -l < $sourceFile;`+0;
-            $content->{contentStats}->{line_counts} = $fileLines;
+            $content->{tokens} = $fileStats->{tokens};
+            $content->{author_counts} = $fileStats->{author_counts};
+            $content->{commit_counts} = $fileStats->{commit_counts};
+            $content->{line_counts} = $fileLines;
+            $content->{file_counts} = '-';
 
+            $content->{authors} = $authors;
+            $content->{commits} = $commits;
 
             print(++$index . ": $contentPath with $fileLines lines\n") if $verbose;
         }
-    }
 
+        $content->{url} = "./".basename($contentPath);
+
+        # update line counts and file counts
+        $directoryData->{line_counts} += $content->{line_counts};
+        $directoryData->{file_counts} += ($content->{file_counts} eq '-') ? 1 : $content->{file_counts};
+    }
     # return the directory data for parent dir to use
     return $directoryData;
-}
-
-sub Error {
-    my $message = shift @_;
-    print STDERR "Error: ", $message, "\n";
-    return 1;
-}
-
-sub Warning {
-    my $message = shift @_;
-    print STDERR "Warning: ", $message, "\n";
-    $warningCount++;
-    return 1;
 }
 
 sub content_object {
     my $name = shift @_;
 
     my $contentObject = {
-        name => $name,
-        contentStats => {
-            tokens => 0,
-            commits => 0,
-            line_counts => 0,
-            file_counts => 0,
-            author_counts => 0
-        },
-        authors => undef,
-        commits => undef
+        name          => $name,
+        tokens        => 0,
+        commit_counts => 0,
+        line_counts   => 0,
+        file_counts   => 0,
+        author_counts => 0,
+        authors       => undef,
+        commits       => undef
     };
 
     return $contentObject;
