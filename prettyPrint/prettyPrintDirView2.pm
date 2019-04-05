@@ -14,6 +14,7 @@ my $dirCommitsSth;
 
 my $perFileActivityDB = "activity.db";
 my $perFileActivityTable = "perfileactivity";
+my $dategroupTable = "perfiledategroup";
 
 # get breadcrumbs for HTML view
 sub get_breadcrumbs {
@@ -115,6 +116,7 @@ sub get_file_stats {
 
         push (@commits, {
             cid         => @currCommit[0],
+            pid         => @currCommit[1],
             author      => $authorName,
             epoch       => str2time(@currCommit[3]),
             token_count => @currCommit[4]
@@ -216,6 +218,7 @@ sub get_directory_stats {
 
         my $currCommit = {
             cid         => @currCommit[0],
+            pid         => @currCommit[1],
             author      => $authorName,
             epoch       => str2time(@currCommit[3]),
             token_count => @currCommit[4]
@@ -318,6 +321,7 @@ sub get_subdir_stats {
 
         push (@commits, {
             cid         => @currCommit[0],
+            pid         => @currCommit[1],
             author      => $authorName,
             epoch       => str2time(@currCommit[3]),
             token_count => @currCommit[4]
@@ -333,29 +337,37 @@ sub get_subdir_stats {
     return ([@authors], [@commits], $fileStats);
 }
 
+# TODO: very time consuming, see if I can use database query to replace this
 sub commits_to_dategroup {
     my @commits = @{shift @_};
-    my @authors = @{shift @_};
+    # my @authors = @{shift @_};
+    my $authorsCached = shift @_;
 
     my @dateGroups = ();
     foreach (@commits) {
         my $commit = $_;
-        my $commitAuthor = $commit->{author};
+        my $commitAuthorPID = $commit->{pid};
         my $commitTokenCount = $commit->{token_count};
-        my ($matchedAuthor) = grep {$commitAuthor eq $_->{name}} @authors;
+        my $matchedAuthor = $authorsCached->{$commitAuthorPID};
 
-        if (! defined $matchedAuthor) {
-            PrettyPrint::Error("author $commitAuthor not found. \n");
-        }
+        # if (! defined $matchedAuthor) {
+        #     Error("author $commit->{author} not found. \n");
+        #     next;
+        # }
 
-        my $commitAuthorId = $matchedAuthor->{id};
+        my $commitAuthorId = (defined $matchedAuthor) ? $matchedAuthor->{id} : 60; # if not found then to the Others group
         my $commitDate = time2str("%Y-%m-01 00:00:00", $commit->{epoch});
         my $dateGroupIndex = str2time($commitDate);
 
         my ($dateGroup) = grep {$dateGroupIndex eq $_->{timestamp}} @dateGroups;
 
         # create this date group if not defined
-        push (@dateGroups, {timestr => time2str("%B %Y", $dateGroupIndex), timestamp => $dateGroupIndex, group => undef, total_tokens => 0}) if ! defined $dateGroup;
+        push (@dateGroups, {
+            timestr => time2str("%B %Y", $dateGroupIndex),
+            timestamp => $dateGroupIndex,
+            group => undef,
+            total_tokens => 0
+        }) if ! defined $dateGroup;
 
         my ($targetDateGroup) = grep {$dateGroupIndex eq $_->{timestamp}} @dateGroups;
         my ($groupWithAuthorId) = grep {$commitAuthorId eq $_->{author_id}} @{$targetDateGroup->{group}};
@@ -401,6 +413,14 @@ sub per_file_activity_dbi {
         tokens int,
         autdate text);"
     );
+    $dbh->do("DROP TABLE IF EXISTS $dategroupTable;");
+    $dbh->do(
+        "CREATE TABLE $dategroupTable (
+        filename text,
+        dategroup text,
+        );"
+    );
+    # perfileactivity table : filename|author id|author name|commit id|tokens in this commit|commit date
     $dbh->do(
         "WITH t1 AS (SELECT filename, cid, COUNT(cid) AS tokenspercid FROM blametoken
         GROUP BY filename, cid) INSERT INTO $perFileActivityTable SELECT filename,
@@ -408,6 +428,12 @@ sub per_file_activity_dbi {
         autdate FROM t1 LEFT JOIN commits ON (t1.cid=commits.cid) LEFT JOIN commitmap
         ON (t1.cid=commitmap.cid) LEFT JOIN emails ON (autname=emailname AND autemail
         =emailaddr) LEFT JOIN persons USING (personid) ORDER BY filename, tokens DESC;"
+    );
+    $dbh->do(
+        "WITH t1 AS (SELECT *, SUBSTR(autdate, 1, 7)||'-01 00:00:00' AS dategroup FROM
+        $perFileActivityTable) INSERT INTO $dategroupTable SELECT filename, t1.dategroup
+        AS dategroup, personid, personname, SUM(tokens) AS tokens FROM t1 GROUP BY filename,
+        t1.dategroup, personid ORDER BY filename, dategroup;"
     );
     print ".Done!\n";
 }

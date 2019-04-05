@@ -77,8 +77,11 @@ sub process_directory {
     $directoryData->{breadcrumbs} = $breadcrumbs;
     $directoryData->{path} = $dirPath;
 
+    print "Directory: $breadcrumbsPath \nGetting directory stats..";
+
     # get directory stats : authors, commits, (token counts, author counts, commit counts), cached data
     my ($authors, $commits, $fileStats, $dirAuthorsCached) = PrettyPrintDirView2::get_directory_stats($breadcrumbsPath);
+    print ".Done!\n";
 
     $directoryData->{tokens} = $fileStats->{tokens};
     $directoryData->{authors} = dclone $authors;
@@ -91,7 +94,6 @@ sub process_directory {
     my $tokenLen = 0;
     my $fileTokenLen = 0;
 
-    print "Directory: $breadcrumbsPath \n";
     opendir(my $dh, $dirPath);
     my @contentList = grep {$_ ne '.' and $_ ne '..'} readdir $dh;
 
@@ -121,7 +123,8 @@ sub process_directory {
             $content->{authors} = dclone $authors;
             $content->{commits} = dclone $commits;
 
-            my $dateGroups = PrettyPrintDirView2::commits_to_dategroup(\@{$commits}, \@{$authors});
+            # my $dateGroups = PrettyPrintDirView2::commits_to_dategroup(\@{$commits}, \@{$authors});
+            my $dateGroups = PrettyPrintDirView2::commits_to_dategroup(\@{$commits}, $dirAuthorsCached);
             my @sortedDateGroup = (defined $dateGroups) ? sort { $a->{timestamp} <=> $b->{timestamp} } @{$dateGroups} : ();
             $content->{dateGroups} = [@sortedDateGroup];
 
@@ -154,7 +157,8 @@ sub process_directory {
             $content->{authors} = dclone $authors;
             $content->{commits} = dclone $commits;
 
-            my $dateGroups = PrettyPrintDirView2::commits_to_dategroup(\@{$commits}, \@{$authors});
+            # my $dateGroups = PrettyPrintDirView2::commits_to_dategroup(\@{$commits}, \@{$authors});
+            my $dateGroups = PrettyPrintDirView2::commits_to_dategroup(\@{$commits}, $dirAuthorsCached);
             my @sortedDateGroup = (defined $dateGroups) ? sort { $a->{timestamp} <=> $b->{timestamp} } @{$dateGroups} : ();
             $content->{dateGroups} = [@sortedDateGroup];
 
@@ -250,7 +254,7 @@ sub print_directory {
         $file = *STDOUT;
     }
 
-    print "\nGenerating directory view of [$directory->{path}]...";
+    print "Generating directory view of [$directory->{path}]...";
     print $file $template->output();
     print ".Done! \n";
 
