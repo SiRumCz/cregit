@@ -1,0 +1,266 @@
+#!/usr/bin/perl
+use strict;
+use File::Basename;
+use File::Path;
+use Getopt::Long;
+use HTML::Template;
+use Pod::Usage;
+use Storable qw(dclone);
+
+use lib dirname(__FILE__);
+use prettyPrintDirView;
+
+my $cregitVersion = "2.0-RC1";
+my $filter = "";
+my $filter_lang = 0;
+my $help = 0;
+my $man = 0;
+my $outputFile = undef;
+my $overwrite = 0;
+my $templateFile = undef;
+my $verbose = 0;
+my $webRoot = "";
+my $webRootRelative = 0;
+my $printSingle = 0;
+my $printRecursive = 0;
+my $dbUpdate = 0;
+my $index = 0;
+my $warningCount = 0;
+
+my $printDirPath;
+my $sourceDB;
+my $authorsDB;
+my $blametokensDB;
+my $repoDir;
+my $outputDir;
+
+my $defaultTemplate = dirname(__FILE__) . "/templates/directory.tmpl";
+my $templateParams = {
+    loop_context_vars => 1,
+    die_on_bad_params => 0,
+};
+
+sub print_single_dir {
+    $printDirPath = shift @ARGV; # root/SUBDIR1/SUBDIR2
+    $repoDir = shift @ARGV; # original repository
+    $sourceDB = shift @ARGV; # token.db
+    $authorsDB  = shift @ARGV; # persons.db
+    $blametokensDB = shift @ARGV; # blame-token.db
+    $outputDir = shift @ARGV; # output directory /home/(users)/public_html
+
+    Usage("Database of tokenized repository does not exist [$sourceDB]", 0) unless -f $sourceDB;
+    Usage("Database of authors does not exist [$authorsDB]", 0) unless -f $authorsDB;
+    Usage("Database of authors does not exist [$blametokensDB]", 0) unless -f $blametokensDB;
+    Usage("Output Directory not found [$outputDir], maybe try to run file view first\n", 0) unless -e $outputDir;
+
+    $printDirPath = substr($printDirPath, 4) if $printDirPath =~ /root/;
+    my $directoryPath = File::Spec->catfile($outputDir, $printDirPath);
+    my $dirName = ($directoryPath eq $outputDir) ? "root" : basename($directoryPath);
+
+    my $directoryData = content_object($dirName);
+    my $breadcrumbsPath = File::Spec->catdir("root/", substr($directoryPath, length $outputDir));
+    my $breadcrumbs = PrettyPrintDirView::get_breadcrumbs($breadcrumbsPath);
+
+    $directoryData->{breadcrumbs} = $breadcrumbs;
+    $directoryData->{path} = $directoryPath;
+
+    print "Directory: $breadcrumbsPath \nGetting directory stats..";
+    my ($authors, $stats) = PrettyPrintDirView::get_directory_stats($breadcrumbsPath);
+
+    $directoryData->{authors} = dclone $authors;
+    $directoryData->{tokens} = $stats->{tokens};
+    $directoryData->{author_counts} = $stats->{author_counts};
+    $directoryData->{commit_counts} = $stats->{commit_counts};
+
+    my @dirList = ();
+    my @fileList = ();
+    my $tokenLen = 0;
+    my $fileTokenLen = 0;
+
+    opendir(my $dh, $directoryPath);
+    my @contentList = grep {$_ ne '.' and $_ ne '..'} readdir $dh;
+
+    foreach (@contentList) {
+        my $currContent = $_;
+        # skip hidden file or folder
+        next if substr($currContent, 0, 1) eq ".";
+
+        my $content;
+        my $contentPath = File::Spec->catfile($directoryPath, $currContent);
+
+        if (-d $contentPath) {
+            my $dirSourcePath = substr ($contentPath, (length $outputDir)+1);
+            $dirSourcePath = File::Spec->catfile($repoDir, $dirSourcePath);
+            next if ! -e $dirSourcePath; # skip irrelevant folder(s)
+
+            my $contentRelativePath = File::Spec->catdir("root/", substr($contentPath, length $outputDir));
+            my ($contentAuthors, $contentStats) = PrettyPrintDirView::get_content_stats($contentRelativePath, 'd');
+
+            $content = content_object($currContent);
+            $content->{tokens} = $contentStats->{tokens};
+            $content->{author_counts} = $contentStats->{author_counts};
+            $content->{url} = "./".$currContent;
+            $content->{authors} = dclone $contentAuthors;
+        }
+    }
+}
+
+sub print_recursive_dirs {
+    $printDirPath = shift @ARGV; # root/SUBDIR1/SUBDIR2
+    $repoDir = shift @ARGV; # original repository
+    $sourceDB = shift @ARGV; # token.db
+    $authorsDB  = shift @ARGV; # persons.db
+    $blametokensDB = shift @ARGV; # blame-token.db
+    $outputDir = shift @ARGV; # output directory /home/(users)/public_html
+
+    Usage("Database of tokenized repository does not exist [$sourceDB]", 0) unless -f $sourceDB;
+    Usage("Database of authors does not exist [$authorsDB]", 0) unless -f $authorsDB;
+    Usage("Database of authors does not exist [$blametokensDB]", 0) unless -f $blametokensDB;
+    Usage("Output Directory not found [$outputDir], maybe try to run file view first\n", 0) unless -e $outputDir;
+
+}
+
+sub print_directory {
+    my $directory = shift @_;
+    my @dirList = @{shift @_};
+    my @fileList = @{shift @_};
+
+    my $outputFile = File::Spec->catfile($directory->{path}, "index.html");
+    my ($fileName, $fileDir) = fileparse($outputFile);
+    my $relativePath = File::Spec->abs2rel($outputDir, $fileDir);
+    $webRoot = $relativePath if $webRootRelative;
+    $templateFile = $templateFile ? $templateFile : $defaultTemplate;
+    my @contributorsByName = sort {$a->{name} cmp $b->{name}} @{$directory->{authors}};
+    my @sortedDirList = sort {$a->{name} cmp $b->{name}} @dirList;
+    my @sortedFileList = sort {$a->{name} cmp $b->{name}} @fileList;
+
+    my $template = HTML::Template->new(filename => $templateFile, %$templateParams);
+
+    $template->param(directory_name => $directory->{name});
+    $template->param(web_root => $webRoot);
+    $template->param(breadcrumb_nav => $directory->{breadcrumbs});
+    $template->param(contributors_by_name => \@contributorsByName);
+    $template->param(contributors_count => $directory->{author_counts});
+    $template->param(contributors => $directory->{authors});
+    $template->param(total_tokens => $directory->{tokens});
+    $template->param(total_commits => $directory->{commit_counts});
+    $template->param(has_subdir => scalar @dirList);
+    $template->param(has_file => scalar @fileList);
+    $template->param(directory_list => \@sortedDirList);
+    $template->param(file_list => \@sortedFileList);
+    $template->param(cregit_version => $cregitVersion);
+    $template->param(has_hidden => (scalar @contributorsByName)>20);
+    $template->param(time_min => $directory->{commits}[0]->{epoch});
+    $template->param(time_max => $directory->{commits}[(scalar @{$directory->{commits}})-1]->{epoch});
+
+    my $file = undef;
+
+    if (-f $outputFile and !$overwrite) {
+        print("Output file already exists. Skipping.\n") if $verbose;
+        return 0;
+    }
+
+    if ($outputFile ne "") {
+        open($file, ">", $outputFile) or return PrettyPrint::Error("cannot write to [$outputFile]");
+    } else {
+        $file = *STDOUT;
+    }
+
+    print "Generating directory view of [$directory->{path}]...";
+    print $file $template->output();
+    print ".Done! \n";
+
+    return 0;
+}
+
+sub content_object {
+    my $name = shift @_;
+
+    my $contentObject = {
+        name          => $name,
+        tokens        => 0,
+        commit_counts => 0,
+        line_counts   => 0,
+        file_counts   => 0,
+        author_counts => 0,
+        authors       => undef,
+        commits       => undef
+    };
+
+    return $contentObject;
+}
+
+sub Usage {
+    my ($message, $verbose) = @_;
+    print STDERR $message, "\n";
+    pod2usage(-verbose=>$verbose) if $verbose > 0;
+    exit(1);
+}
+
+GetOptions(
+    "help"              => \$help,
+    "man"               => \$man,
+    "verbose"           => \$verbose,
+    "update"            => \$dbUpdate,
+    "template=s"        => \$templateFile,
+    "output=s"          => \$outputFile,
+    "filter=s"          => \$filter,
+    "filter-lang=s"     => \$filter_lang,
+    "overwrite"         => \$overwrite,
+    "webroot=s"         => \$webRoot,
+    "webroot-relative"  => \$webRootRelative,
+    "print-single"    => \$printSingle,
+    "print-recursive" => \$printRecursive
+) or die("Error in command line arguments\n");
+
+exit pod2usage(-verbose=>1) if ($help);
+exit pod2usage(-verbose=>2) if ($man);
+exit pod2usage(-verbose=>1, -exit=>1) if (!defined(@ARGV[0]));
+exit pod2usage(-verbose=>1, -exit=>1) if (not -f @ARGV[0] and not -d @ARGV[0]);
+exit print_recursive_dir if ($printRecursive);
+exit print_single_dir;
+
+__END__
+
+# pod
+=head1 NAME
+
+prettyPrintDirView2.pl: create the "pretty" output of directories in a git repository
+
+=head1 SYNOPSIS
+
+  prettyPrintDirView2.pl [options] [--print-single] <path> <repoDir> <cregitRepoDB> <authorsDB> <blametokensDB> <outputDir>
+
+  prettyPrintDirView2.pl [options] --print-recursive <path> <reepoDir> <cregitRepoDB> <authorsDB> <blametokensDB> <outputDir>
+
+     Options:
+        --help             Brief help message
+        --man              Full documentation
+        --verbose          Enable verbose output
+        --update           Update database activity for each file
+        --template         The template file used to generate static html pages
+                           Defaults to templates/page.tmpl
+        --print-single     Create HTML view for single directory, default is single
+        --print-recursive  Create HTML views recursively starts from current directory
+
+     Options: (single)
+        --output           The output file. Defaults to STDOUT.
+        --webroot          The web_root template parameter value.
+                           Defaults to empty
+        --template-var     Defines additional template variables.
+                           Usage: --template-var [variable]=[value]
+
+     Options: (multi)
+        --overwrite        Overwrite existing files that have previously been generated.
+        --webroot          The web_root template parameter value.
+                           Defaults to empty
+        --webroot-relative Specifies that the value of webroot should
+                           be set based on the relative path of the file
+                           in relation to the output directory.
+        --filter           A regex file filter for processed files.
+        --filter-lang      Filters input files by language
+                               c      *.c|*.h
+                               cpp    *.cpp|*.h|*.hpp
+
+# Pod block end
+=cut
