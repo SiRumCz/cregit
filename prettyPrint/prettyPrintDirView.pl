@@ -53,8 +53,18 @@ sub print_single_dir {
     Usage("Database of authors does not exist [$blametokensDB]", 0) unless -f $blametokensDB;
     Usage("Output Directory not found [$outputDir], maybe try to run file view first\n", 0) unless -e $outputDir;
 
+    PrettyPrintDirView::setup_dbi($sourceDB, $authorsDB, $blametokensDB, "");
+    PrettyPrintDirView::per_file_activity_dbi() if $dbUpdate; # update per file activity table
+
+    # filter for c and c++ programming language
+    if ($filter_lang eq "c") {
+        $filter = "\\.(h|c).html\$";
+    } elsif ($filter_lang eq "cpp") {
+        $filter = "\\.(h(pp)?|cpp).html\$";
+    }
+
     $printDirPath = substr($printDirPath, 4) if $printDirPath =~ /root/;
-    my $directoryPath = File::Spec->catfile($outputDir, $printDirPath);
+    my $directoryPath = File::Spec->catdir($outputDir, $printDirPath);
     my $dirName = ($directoryPath eq $outputDir) ? "root" : basename($directoryPath);
 
     my $directoryData = content_object($dirName);
@@ -66,11 +76,14 @@ sub print_single_dir {
 
     print "Directory: $breadcrumbsPath \nGetting directory stats..";
     my ($authors, $stats) = PrettyPrintDirView::get_directory_stats($breadcrumbsPath);
+    my ($minTime, $maxTime) = PrettyPrintDirView::get_minmax_time($breadcrumbsPath);
 
     $directoryData->{authors} = dclone $authors;
     $directoryData->{tokens} = $stats->{tokens};
     $directoryData->{author_counts} = $stats->{author_counts};
     $directoryData->{commit_counts} = $stats->{commit_counts};
+    $directoryData->{mintime} = $minTime;
+    $directoryData->{maxtime} = $maxTime;
 
     my @dirList = ();
     my @fileList = ();
@@ -95,14 +108,77 @@ sub print_single_dir {
 
             my $contentRelativePath = File::Spec->catdir("root/", substr($contentPath, length $outputDir));
             my ($contentAuthors, $contentStats) = PrettyPrintDirView::get_content_stats($contentRelativePath, 'd');
+            my $dateGroups = PrettyPrintDirView::get_content_dategroup($contentRelativePath, 'd');
 
             $content = content_object($currContent);
             $content->{tokens} = $contentStats->{tokens};
             $content->{author_counts} = $contentStats->{author_counts};
             $content->{url} = "./".$currContent;
             $content->{authors} = dclone $contentAuthors;
+            $content->{dateGroups} = dclone $dateGroups;
+
+            push(@dirList, dclone $content);
+        } elsif (-f $contentPath and $contentPath =~ /$filter/) {
+            my $fileName = substr ($contentPath, (length $outputDir)+1, (length $contentPath)-(length $outputDir)-6);
+            my $sourceFile = File::Spec->catfile($repoDir, $fileName);
+
+            if (! -f $sourceFile) {
+                $warningCount += PrettyPrintDirView::Warning("Missing source file $sourceFile");
+                next;
+            }
+
+            my ($contentAuthors, $contentStats) = PrettyPrintDirView::get_content_stats($fileName, 'f');
+            my $dateGroups = PrettyPrintDirView::get_content_dategroup($fileName, 'f');
+
+            $content = content_object(basename($fileName));
+            my $fileLines = `wc -l < $sourceFile;`+0;
+            $content->{tokens} = $contentStats->{tokens};
+            $content->{author_counts} = $contentStats->{author_counts};
+            $content->{line_counts} = $fileLines;
+            $content->{file_counts} = '-';
+            $content->{url} = "./".basename($contentPath);
+            $content->{authors} = dclone $contentAuthors;
+            $content->{dateGroups} = dclone $dateGroups;
+
+            push(@fileList, dclone $content);
+            $fileTokenLen = ($content->{tokens} > $fileTokenLen) ? $content->{tokens} : $fileTokenLen;
+        }
+
+        $tokenLen = ($content->{tokens} > $tokenLen) ? $content->{tokens} : $tokenLen;
+    }
+
+    my $lengthPercentage;
+    # update content width
+    foreach (@dirList) {
+        my $currDir = $_;
+
+        $lengthPercentage = ($tokenLen == 0) ? 0 : 100.0 * $currDir->{tokens} / $tokenLen;
+        $currDir->{width} = sprintf("%.2f\%", $lengthPercentage);
+
+        foreach (@{$_->{dateGroups}}) {
+            $lengthPercentage = ($currDir->{tokens} == 0) ? 0 : 100.0 * $_->{total_tokens} / $currDir->{tokens};
+            $_->{width} = sprintf("%.2f\%", $lengthPercentage);
         }
     }
+
+    foreach (@fileList) {
+        my $currFile = $_;
+
+        $lengthPercentage = ($tokenLen == 0) ? 0 : 100.0 * $currFile->{tokens} / $tokenLen;
+        $currFile->{width} = sprintf("%.2f\%", $lengthPercentage);
+        $lengthPercentage = ($fileTokenLen == 0) ? 0 : 100.0 * $currFile->{tokens} / $fileTokenLen;
+        $currFile->{width_in_files} = sprintf("%.2f\%", $lengthPercentage);
+
+        foreach (@{$_->{dateGroups}}) {
+            $lengthPercentage = ($currFile->{tokens} == 0) ? 0 : 100.0 * $_->{total_tokens} / $currFile->{tokens};
+            $_->{width} = sprintf("%.2f\%", $lengthPercentage);
+        }
+    }
+
+    # print HTML view
+    print_directory($directoryData, \@dirList, \@fileList);
+
+    return 0;
 }
 
 sub print_recursive_dirs {
@@ -150,8 +226,8 @@ sub print_directory {
     $template->param(file_list => \@sortedFileList);
     $template->param(cregit_version => $cregitVersion);
     $template->param(has_hidden => (scalar @contributorsByName)>20);
-    $template->param(time_min => $directory->{commits}[0]->{epoch});
-    $template->param(time_max => $directory->{commits}[(scalar @{$directory->{commits}})-1]->{epoch});
+    $template->param(time_min => $directory->{mintime});
+    $template->param(time_max => $directory->{maxtime});
 
     my $file = undef;
 
@@ -215,9 +291,9 @@ GetOptions(
 
 exit pod2usage(-verbose=>1) if ($help);
 exit pod2usage(-verbose=>2) if ($man);
-exit pod2usage(-verbose=>1, -exit=>1) if (!defined(@ARGV[0]));
-exit pod2usage(-verbose=>1, -exit=>1) if (not -f @ARGV[0] and not -d @ARGV[0]);
-exit print_recursive_dir if ($printRecursive);
+exit pod2usage(-verbose=>1, -exit=>1) if (!defined(@ARGV[1]));
+exit pod2usage(-verbose=>1, -exit=>1) if (not -f @ARGV[1] and not -d @ARGV[1]);
+exit print_recursive_dirs if ($printRecursive);
 exit print_single_dir;
 
 __END__
