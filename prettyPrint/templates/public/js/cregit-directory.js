@@ -214,6 +214,10 @@ $(document).ready(function() {
 			$authorHighlighting.each(function() {
 				$(this).removeClass("hidden");
 			});
+
+			if (lastMode != "author-single") {
+				dateChanged = true;
+			}
 		}
 
 		lastMode = highlightMode;

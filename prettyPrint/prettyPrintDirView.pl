@@ -40,7 +40,7 @@ my $templateParams = {
     die_on_bad_params => 0,
 };
 
-sub print_single_dir {
+sub pre_setup {
     $printDirPath = shift @ARGV; # root/SUBDIR1/SUBDIR2
     $repoDir = shift @ARGV; # original repository
     $sourceDB = shift @ARGV; # token.db
@@ -63,6 +63,10 @@ sub print_single_dir {
         $filter = "\\.(h(pp)?|cpp).html\$";
     }
 
+    return 0;
+}
+
+sub print_single_dir {
     $printDirPath = substr($printDirPath, 4) if $printDirPath =~ /root/;
     my $directoryPath = File::Spec->catdir($outputDir, $printDirPath);
     my $dirName = ($directoryPath eq $outputDir) ? "root" : basename($directoryPath);
@@ -74,9 +78,9 @@ sub print_single_dir {
     $directoryData->{breadcrumbs} = $breadcrumbs;
     $directoryData->{path} = $directoryPath;
 
-    print "Directory: $breadcrumbsPath \nGetting directory stats..";
     my ($authors, $stats) = PrettyPrintDirView::get_directory_stats($breadcrumbsPath);
     my ($minTime, $maxTime) = PrettyPrintDirView::get_minmax_time($breadcrumbsPath);
+    print ++$index." : Directory: $breadcrumbsPath \nGetting directory stats...Done!\n";
 
     $directoryData->{authors} = dclone $authors;
     $directoryData->{tokens} = $stats->{tokens};
@@ -109,6 +113,7 @@ sub print_single_dir {
             my $contentRelativePath = File::Spec->catdir("root/", substr($contentPath, length $outputDir));
             my ($contentAuthors, $contentStats) = PrettyPrintDirView::get_content_stats($contentRelativePath, 'd');
             my $dateGroups = PrettyPrintDirView::get_content_dategroup($contentRelativePath, 'd');
+            my ($fileCount, $lineCount) = get_file_and_line_counts($contentPath);
 
             $content = content_object($currContent);
             $content->{tokens} = $contentStats->{tokens};
@@ -116,6 +121,8 @@ sub print_single_dir {
             $content->{url} = "./".$currContent;
             $content->{authors} = dclone $contentAuthors;
             $content->{dateGroups} = dclone $dateGroups;
+            $content->{line_counts} = $lineCount;
+            $content->{file_counts} = $fileCount;
 
             push(@dirList, dclone $content);
         } elsif (-f $contentPath and $contentPath =~ /$filter/) {
@@ -178,22 +185,77 @@ sub print_single_dir {
     # print HTML view
     print_directory($directoryData, \@dirList, \@fileList);
 
+    closedir($dh);
     return 0;
 }
 
 sub print_recursive_dirs {
-    $printDirPath = shift @ARGV; # root/SUBDIR1/SUBDIR2
-    $repoDir = shift @ARGV; # original repository
-    $sourceDB = shift @ARGV; # token.db
-    $authorsDB  = shift @ARGV; # persons.db
-    $blametokensDB = shift @ARGV; # blame-token.db
-    $outputDir = shift @ARGV; # output directory /home/(users)/public_html
+    $printDirPath = substr($printDirPath, 4) if $printDirPath =~ /root/;
+    my $directoryPath = File::Spec->catdir($outputDir, $printDirPath);
 
-    Usage("Database of tokenized repository does not exist [$sourceDB]", 0) unless -f $sourceDB;
-    Usage("Database of authors does not exist [$authorsDB]", 0) unless -f $authorsDB;
-    Usage("Database of authors does not exist [$blametokensDB]", 0) unless -f $blametokensDB;
-    Usage("Output Directory not found [$outputDir], maybe try to run file view first\n", 0) unless -e $outputDir;
+    opendir(my $dh, $directoryPath);
+    my @contentList = grep {$_ ne '.' and $_ ne '..'} readdir $dh;
 
+    print_single_dir();
+
+    foreach (@contentList) {
+        my $currContent = $_;
+        # skip hidden file or folder
+        next if substr($currContent, 0, 1) eq ".";
+
+        my $contentPath = File::Spec->catfile($directoryPath, $currContent);
+        $printDirPath = File::Spec->catdir("root/", substr($contentPath, length $outputDir));
+
+        if (-d $contentPath) {
+            print_recursive_dirs();
+        }
+    }
+
+    closedir($dh);
+    return 0;
+}
+
+sub get_file_and_line_counts {
+    my $dirPath = shift @_;
+    my $fileCount = 0;
+    my $lineCount = 0;
+
+    opendir(my $dh, $dirPath);
+    my @contentList = grep {$_ ne '.' and $_ ne '..'} readdir $dh;
+
+    foreach (@contentList) {
+        my $currContent = $_;
+        # skip hidden file or folder
+        next if substr($currContent, 0, 1) eq ".";
+
+        my $contentPath = File::Spec->catfile($dirPath, $currContent);
+
+        if (-d $contentPath) {
+            my $dirName = substr ($contentPath, (length $outputDir)+1);
+            my $sourceDir = File::Spec->catfile($repoDir, $dirName);
+
+            next if(! -e $sourceDir);
+
+            my ($files, $lines) = get_file_and_line_counts($contentPath);
+            $fileCount += $files;
+            $lineCount += $lines;
+        } elsif (-f $contentPath and $contentPath =~ /$filter/) {
+            my $fileName = substr ($contentPath, (length $outputDir)+1, (length $contentPath)-(length $outputDir)-6);
+            my $sourceFile = File::Spec->catfile($repoDir, $fileName);
+
+            if (! -f $sourceFile) {
+                $warningCount += PrettyPrintDirView::Warning("Missing source file $sourceFile");
+                next;
+            }
+
+            $fileCount++;
+            my $fileLines = `wc -l < $sourceFile;`+0;
+            $lineCount += $fileLines;
+        }
+    }
+
+    closedir($dh);
+    return ($fileCount, $lineCount);
 }
 
 sub print_directory {
@@ -242,7 +304,7 @@ sub print_directory {
         $file = *STDOUT;
     }
 
-    print "Generating directory view of [$directory->{path}]...";
+    print "Generating directory view in [$outputFile]..";
     print $file $template->output();
     print ".Done! \n";
 
@@ -264,6 +326,11 @@ sub content_object {
     };
 
     return $contentObject;
+}
+
+sub print_stats {
+    print "Processed: [$index]\n";
+    return 0;
 }
 
 sub Usage {
@@ -293,8 +360,11 @@ exit pod2usage(-verbose=>1) if ($help);
 exit pod2usage(-verbose=>2) if ($man);
 exit pod2usage(-verbose=>1, -exit=>1) if (!defined(@ARGV[1]));
 exit pod2usage(-verbose=>1, -exit=>1) if (not -f @ARGV[1] and not -d @ARGV[1]);
-exit print_recursive_dirs if ($printRecursive);
-exit print_single_dir;
+pre_setup;
+print_recursive_dirs if ($printRecursive);
+print_single_dir;
+print_stats;
+
 
 __END__
 

@@ -406,7 +406,7 @@ sub per_file_activity_dbi {
 
 sub create_directory_table_dbi {
     my $dirPath = shift @_;
-    my $bindingVar = ($dirPath eq "root") ? "\'%\'" : substr($dirPath, 5)."\'/%\'";
+    my $bindingVar = ($dirPath eq "root") ? "\'%\'" : "\'".substr($dirPath, 5)."/%\'";
 
     $dbh->do("DROP TABLE IF EXISTS $directoryTmpTable;");
     print "Creating directory data [$dirPath]..";
