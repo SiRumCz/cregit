@@ -180,7 +180,7 @@ sub get_content_dategroup {
     my $OthersTokenCount = 0;
     foreach (@{$dategroupMeta}) {
         my @currDategroup = @{$_};
-        @currDategroup = ("1970-01-01 00:00:00", 60, 0) unless (scalar @currDategroup == 3);
+        @currDategroup = ("1970-01-01 00:00:00", $authorLimit, 0) unless (scalar @currDategroup == 3);
 
         my $dategroup = str2time(@currDategroup[0]);
         my $authorId = @currDategroup[1];
@@ -362,7 +362,7 @@ sub prepare_dbi {
         , commit_proportion FROM $directoryTmpTable LIMIT $authorLimit), t2 AS (SELECT $authorLimit AS id,
         'Black' AS color_id, 'Others' AS personname, SUM(tokens) AS tokens, SUM(token_proportion) AS token_proportion
         , SUM(commits) AS commits, SUM(commit_proportion) AS commit_proportion FROM $directoryTmpTable WHERE rowid
-        > $authorLimit) SELECT *, 1 AS od FROM t1 UNION ALL SELECT *, 2 AS od FROM t2 ORDER BY od;"
+        > $authorLimit) SELECT *, 1 AS od FROM t1 UNION ALL SELECT *, 2 AS od FROM t2 WHERE t2.tokens IS NOT NULL ORDER BY od;"
     ); # id|color_id|personname|tokens|token_proportion|commits|commit_proportion
 
     $dirStatsCountSth = $dbh->prepare(
@@ -380,7 +380,8 @@ sub prepare_dbi {
          (t1.personid=$directoryTmpTable.personid) where id < $authorLimit ORDER BY t1.tokens DESC), t3 AS (SELECT $authorLimit AS id,
          'Black' AS color_id, 'Others' AS personname, SUM(t1.tokens) AS tokens, SUM(t1.token_proportion) AS
          token_proportion FROM t1 INNER JOIN $directoryTmpTable on(t1.personid=$directoryTmpTable.personid)
-         WHERE $directoryTmpTable.rowid>$authorLimit) SELECT *, 1 AS od FROM t2 UNION ALL SELECT *, 2 AS od FROM t3 ORDER BY od;"
+         WHERE $directoryTmpTable.rowid>$authorLimit) SELECT *, 1 AS od FROM t2 UNION ALL SELECT *, 2 AS od FROM t3
+         WHERE t3.tokens IS NOT NULL ORDER BY od;"
     ); # id|color_id|personname|tokens|token_proportion
 
     $subDirCountsSth = $dbh->prepare(
@@ -401,10 +402,11 @@ sub prepare_dbi {
          = ?)AS float), 0), 0) AS commit_proportion FROM $perFileActivityTable WHERE filename = ? GROUP BY
          personid ORDER BY tokens DESC), t2 AS (SELECT $directoryTmpTable.rowid-1 AS id, $directoryTmpTable.rowid-1
          AS color_id, t1.personname, t1.tokens, t1.token_proportion FROM t1 INNER JOIN $directoryTmpTable on
-         (t1.personid=$directoryTmpTable.personid) where id < 60 ORDER BY t1.tokens DESC), t3 AS (SELECT 60 AS id,
+         (t1.personid=$directoryTmpTable.personid) where id < $authorLimit ORDER BY t1.tokens DESC), t3 AS (SELECT $authorLimit AS id,
          'Black' AS color_id, 'Others' AS personname, SUM(t1.tokens) AS tokens, SUM(t1.token_proportion) AS
          token_proportion FROM t1 INNER JOIN $directoryTmpTable on(t1.personid=$directoryTmpTable.personid)
-         WHERE $directoryTmpTable.rowid>60) SELECT *, 1 AS od FROM t2 UNION ALL SELECT *, 2 AS od FROM t3 ORDER BY od;"
+         WHERE $directoryTmpTable.rowid>$authorLimit) SELECT *, 1 AS od FROM t2 UNION ALL SELECT *, 2 AS od FROM t3
+         WHERE t3.tokens IS NOT NULL ORDER BY od;"
     ); # id|color_id|personname|tokens|token_proportion
 
     $fileCountsSth = $dbh->prepare(
