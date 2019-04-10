@@ -12,6 +12,7 @@ use prettyPrintDirView;
 
 my $cregitVersion = "2.0-RC1";
 my $filter = "";
+my $findRegex = "";
 my $filter_lang = 0;
 my $help = 0;
 my $man = 0;
@@ -54,13 +55,17 @@ sub pre_setup {
     Usage("Output Directory not found [$outputDir], maybe try to run file view first\n", 0) unless -e $outputDir;
 
     PrettyPrintDirView::setup_dbi($sourceDB, $authorsDB, $blametokensDB, "");
+    print "Updating per file activity table and date group table.." if $dbUpdate;
     PrettyPrintDirView::per_file_activity_dbi() if $dbUpdate; # update per file activity table
+    print ".Done!\n" if $dbUpdate;
 
     # filter for c and c++ programming language
     if ($filter_lang eq "c") {
         $filter = "\\.(h|c).html\$";
+        $findRegex = "^.*\\.\\(h\\|c\\)\$";
     } elsif ($filter_lang eq "cpp") {
         $filter = "\\.(h(pp)?|cpp).html\$";
+        $findRegex = "^.*\\.\\(h\\(pp\\)\\?\\|cpp\\)\$";
     }
 
     return 0;
@@ -78,9 +83,11 @@ sub print_single_dir {
     $directoryData->{breadcrumbs} = $breadcrumbs;
     $directoryData->{path} = $directoryPath;
 
+    print ++$index." : Directory: $breadcrumbsPath\n";
+    print "Getting directory stats..";
     my ($authors, $stats) = PrettyPrintDirView::get_directory_stats($breadcrumbsPath);
+    print ".Done!\n";
     my ($minTime, $maxTime) = PrettyPrintDirView::get_minmax_time($breadcrumbsPath);
-    print ++$index." : Directory: $breadcrumbsPath \nGetting directory stats...Done!\n";
 
     $directoryData->{authors} = dclone $authors;
     $directoryData->{tokens} = $stats->{tokens};
@@ -111,9 +118,10 @@ sub print_single_dir {
             next if ! -e $dirSourcePath; # skip irrelevant folder(s)
 
             my $contentRelativePath = File::Spec->catdir("root/", substr($contentPath, length $outputDir));
+            print "Subdir : [$contentRelativePath]\n";
             my ($contentAuthors, $contentStats) = PrettyPrintDirView::get_content_stats($contentRelativePath, 'd');
             my $dateGroups = PrettyPrintDirView::get_content_dategroup($contentRelativePath, 'd');
-            my ($fileCount, $lineCount) = get_file_and_line_counts($contentPath);
+            my ($fileCount, $lineCount) = get_file_and_line_counts($dirSourcePath);
 
             $content = content_object($currContent);
             $content->{tokens} = $contentStats->{tokens};
@@ -133,6 +141,8 @@ sub print_single_dir {
                 $warningCount += PrettyPrintDirView::Warning("Missing source file $sourceFile");
                 next;
             }
+
+            print "File : [$fileName]\n";
 
             my ($contentAuthors, $contentStats) = PrettyPrintDirView::get_content_stats($fileName, 'f');
             my $dateGroups = PrettyPrintDirView::get_content_dategroup($fileName, 'f');
@@ -216,45 +226,10 @@ sub print_recursive_dirs {
 }
 
 sub get_file_and_line_counts {
-    my $dirPath = shift @_;
-    my $fileCount = 0;
-    my $lineCount = 0;
+    my $dirSourcePath = shift @_;
+    my $fileCount = `find $dirSourcePath -regex \"$findRegex\" | wc -l `+0;
+    my $lineCount = `find $dirSourcePath -regex \"$findRegex\" -exec cat {} + | wc -l`+0;
 
-    opendir(my $dh, $dirPath);
-    my @contentList = grep {$_ ne '.' and $_ ne '..'} readdir $dh;
-
-    foreach (@contentList) {
-        my $currContent = $_;
-        # skip hidden file or folder
-        next if substr($currContent, 0, 1) eq ".";
-
-        my $contentPath = File::Spec->catfile($dirPath, $currContent);
-
-        if (-d $contentPath) {
-            my $dirName = substr ($contentPath, (length $outputDir)+1);
-            my $sourceDir = File::Spec->catfile($repoDir, $dirName);
-
-            next if(! -e $sourceDir);
-
-            my ($files, $lines) = get_file_and_line_counts($contentPath);
-            $fileCount += $files;
-            $lineCount += $lines;
-        } elsif (-f $contentPath and $contentPath =~ /$filter/) {
-            my $fileName = substr ($contentPath, (length $outputDir)+1, (length $contentPath)-(length $outputDir)-6);
-            my $sourceFile = File::Spec->catfile($repoDir, $fileName);
-
-            if (! -f $sourceFile) {
-                $warningCount += PrettyPrintDirView::Warning("Missing source file $sourceFile");
-                next;
-            }
-
-            $fileCount++;
-            my $fileLines = `wc -l < $sourceFile;`+0;
-            $lineCount += $fileLines;
-        }
-    }
-
-    closedir($dh);
     return ($fileCount, $lineCount);
 }
 
