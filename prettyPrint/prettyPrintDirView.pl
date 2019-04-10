@@ -292,12 +292,10 @@ sub content_object {
     my $contentObject = {
         name          => $name,
         tokens        => 0,
-        commit_counts => 0,
         line_counts   => 0,
         file_counts   => 0,
         author_counts => 0,
-        authors       => undef,
-        commits       => undef
+        authors       => undef
     };
 
     return $contentObject;
@@ -305,6 +303,7 @@ sub content_object {
 
 sub print_stats {
     print "Processed: [$index]\n";
+    print "Process took ".(time-$^T)." seconds\n";
     return 0;
 }
 

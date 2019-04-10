@@ -33,54 +33,24 @@ sub get_directory_stats {
     # create directory stats table
     create_directory_table_dbi($dirPath);
 
-    my @authors = ();
-    my $stats;
     my $result;
 
     # fetch authors
     $result = $dirAuthorsSth->execute();
-    my $authorsMeta = $dirAuthorsSth->fetchall_arrayref;
+    my $authorsMeta = $dirAuthorsSth->fetchall_arrayref({});
 
     if (!defined $result) {
         Warning("Unable to retrieve authors for [$dirPath]");
-        goto FETCHFILESTATS;
     }
 
-    my $index = 0;
-    foreach(@{$authorsMeta}) {
-        my @currAuthor = @{$_};
-        @currAuthor = ($index, $index, "Unknown", 0, 0.0, 0, 0.0, 1) unless (scalar @currAuthor == 8);
-
-        my $author = {
-            id                => @currAuthor[0],
-            color_id          => @currAuthor[1],
-            name              => @currAuthor[2],
-            tokens            => @currAuthor[3],
-            token_proportion  => @currAuthor[4],
-            commits           => @currAuthor[5],
-            commit_proportion => @currAuthor[6],
-            token_percent     => sprintf("%.2f\%", 100.0 * @currAuthor[4]),
-            commit_percent    => sprintf("%.2f\%", 100.0 * @currAuthor[6])
-        };
-
-        push(@authors, $author);
-        $index++;
-    }
-
-    FETCHFILESTATS:
     $result = $dirStatsCountSth->execute();
-    my @statsMeta = $dirStatsCountSth->fetchrow();
+    my $statsMeta = $dirStatsCountSth->fetchrow_hashref();
 
-    if (! defined $result or scalar(@statsMeta) != 3) {
+    if (! defined $result) {
         Warning("Unable to retrieve stats for [$dirPath]");
-        @statsMeta = (0, 0, 0);
     }
 
-    $stats->{author_counts} = @statsMeta[0];
-    $stats->{commit_counts} = @statsMeta[1];
-    $stats->{tokens} = @statsMeta[2];
-
-    return ([@authors], $stats);
+    return ($authorsMeta, $statsMeta);
 }
 
 sub get_content_stats {
@@ -94,59 +64,32 @@ sub get_content_stats {
         $bindingVar = $contentPath;
         # fetch authors
         $result = $fileAuthorsSth->execute($bindingVar, $bindingVar, $bindingVar);
-        $authorsMeta = $fileAuthorsSth->fetchall_arrayref;
+        $authorsMeta = $fileAuthorsSth->fetchall_arrayref({});
     } elsif ('d' eq $type) {
         $bindingVar = ($contentPath eq "root") ? "%" : substr($contentPath, 5)."/%";
         # fetch authors
         $result = $subDirAuthorsSth->execute($bindingVar, $bindingVar, $bindingVar);
-        $authorsMeta = $subDirAuthorsSth->fetchall_arrayref;
+        $authorsMeta = $subDirAuthorsSth->fetchall_arrayref({});
     }
-
-    my @authors = ();
-    my $stats;
 
     if (!defined $result) {
         Warning("Unable to retrieve authors for [$contentPath]");
-        goto FETCHFILESTATS;
     }
 
-    my $index = 0;
-    foreach(@{$authorsMeta}) {
-        my @currAuthor = @{$_};
-        @currAuthor = ($index, $index, "", "Unknown", 0, 0.0, 0, 0.0) unless (scalar @currAuthor == 6);
-
-        my $author = {
-            id               => @currAuthor[0],
-            color_id         => @currAuthor[1],
-            name             => @currAuthor[2],
-            tokens           => @currAuthor[3],
-            token_proportion => @currAuthor[4],
-            token_percent    => sprintf("%.2f\%", 100.0 * @currAuthor[4])
-        };
-
-        push(@authors, $author);
-        $index++;
-    }
-
-    FETCHFILESTATS:
-    my @statsMeta;
+    my $statsMeta;
     if ('f' eq $type) {
         $result = $fileCountsSth->execute($bindingVar);
-        @statsMeta = $fileCountsSth->fetchrow();
+        $statsMeta = $fileCountsSth->fetchrow_hashref();
     } elsif ('d' eq $type) {
         $result = $subDirCountsSth->execute($bindingVar);
-        @statsMeta = $subDirCountsSth->fetchrow();
+        $statsMeta = $subDirCountsSth->fetchrow_hashref();
     }
 
-    if (! defined $result or scalar(@statsMeta) != 2) {
+    if (!defined $result) {
         Warning("Unable to retrieve stats for [$contentPath]");
-        @statsMeta = (0, 0);
     }
 
-    $stats->{author_counts} = @statsMeta[0];
-    $stats->{tokens} = @statsMeta[1];
-
-    return ([@authors], $stats);
+    return ($authorsMeta, $statsMeta);
 }
 
 sub get_content_dategroup {
@@ -358,15 +301,18 @@ sub create_directory_table_dbi {
 
 sub prepare_dbi {
     $dirAuthorsSth = $dbh->prepare(
-        "WITH t1 AS (SELECT rowid-1 AS id, rowid-1 AS color_id, personname, tokens, token_proportion, commits
-        , commit_proportion FROM $directoryTmpTable LIMIT $authorLimit), t2 AS (SELECT $authorLimit AS id,
-        'Black' AS color_id, 'Others' AS personname, SUM(tokens) AS tokens, SUM(token_proportion) AS token_proportion
-        , SUM(commits) AS commits, SUM(commit_proportion) AS commit_proportion FROM $directoryTmpTable WHERE rowid
-        > $authorLimit) SELECT *, 1 AS od FROM t1 UNION ALL SELECT *, 2 AS od FROM t2 WHERE t2.tokens IS NOT NULL ORDER BY od;"
+        "WITH t1 AS (SELECT rowid-1 AS id, rowid-1 AS color_id, personname AS name, tokens, token_proportion,
+        printf(\"%.2f%%\", token_proportion*100) AS token_percent, commits, commit_proportion, printf(\"%.2f%%\",
+        commit_proportion*100) AS commit_percent FROM $directoryTmpTable LIMIT $authorLimit), t2 AS (SELECT
+        $authorLimit AS id, 'Black' AS color_id, 'Others' AS name, SUM(tokens) AS tokens, SUM(token_proportion)
+        AS token_proportion, printf(\"%.2f%%\", SUM(token_proportion)*100) AS token_percent , SUM(commits) AS commits,
+        SUM(commit_proportion) AS commit_proportion, printf(\"%.2f%%\", SUM(commit_proportion)*100) AS commit_percent
+        FROM $directoryTmpTable WHERE rowid> $authorLimit) SELECT *, 1 AS od FROM t1 UNION ALL SELECT *, 2 AS od
+        FROM t2 WHERE t2.tokens IS NOT NULL ORDER BY od;"
     ); # id|color_id|personname|tokens|token_proportion|commits|commit_proportion
 
     $dirStatsCountSth = $dbh->prepare(
-        "SELECT COUNT(DISTINCT personid), SUM(commits) AS commit_count, SUM(tokens) AS token_counts FROM $directoryTmpTable;"
+        "SELECT COUNT(DISTINCT personid) AS author_counts, SUM(commits) AS commit_counts, SUM(tokens) AS tokens FROM $directoryTmpTable;"
     );
 
     $subDirAuthorsSth = $dbh->prepare(
@@ -376,16 +322,17 @@ sub prepare_dbi {
          AS float) / NULLIF(CAST((SELECT COUNT( DISTINCT originalcid) FROM $perFileActivityTable WHERE filename
          LIKE ?)AS float), 0), 0) AS commit_proportion FROM $perFileActivityTable WHERE filename LIKE ? GROUP BY
          personid ORDER BY tokens DESC), t2 AS (SELECT $directoryTmpTable.rowid-1 AS id, $directoryTmpTable.rowid-1
-         AS color_id, t1.personname, t1.tokens, t1.token_proportion FROM t1 INNER JOIN $directoryTmpTable on
-         (t1.personid=$directoryTmpTable.personid) where id < $authorLimit ORDER BY t1.tokens DESC), t3 AS (SELECT $authorLimit AS id,
-         'Black' AS color_id, 'Others' AS personname, SUM(t1.tokens) AS tokens, SUM(t1.token_proportion) AS
-         token_proportion FROM t1 INNER JOIN $directoryTmpTable on(t1.personid=$directoryTmpTable.personid)
-         WHERE $directoryTmpTable.rowid>$authorLimit) SELECT *, 1 AS od FROM t2 UNION ALL SELECT *, 2 AS od FROM t3
-         WHERE t3.tokens IS NOT NULL ORDER BY od;"
+         AS color_id, t1.personname AS name, t1.tokens, t1.token_proportion, printf(\"%.2f%%\", t1.token_proportion*100)
+         AS token_percent FROM t1 INNER JOIN $directoryTmpTable on (t1.personid=$directoryTmpTable.personid) WHERE
+         id < $authorLimit ORDER BY t1.tokens DESC), t3 AS (SELECT $authorLimit AS id,
+         'Black' AS color_id, 'Others' AS name, SUM(t1.tokens) AS tokens, SUM(t1.token_proportion) AS
+         token_proportion, printf(\"%.2f%%\", SUM(t1.token_proportion)*100) AS token_percent FROM t1 INNER JOIN
+         $directoryTmpTable on(t1.personid=$directoryTmpTable.personid) WHERE $directoryTmpTable.rowid>$authorLimit)
+         SELECT *, 1 AS od FROM t2 UNION ALL SELECT *, 2 AS od FROM t3 WHERE t3.tokens IS NOT NULL ORDER BY od;"
     ); # id|color_id|personname|tokens|token_proportion
 
     $subDirCountsSth = $dbh->prepare(
-        "SELECT COUNT(DISTINCT personid) AS author_count, SUM(tokens) AS token_count FROM $perFileActivityTable WHERE filename LIKE ?;"
+        "SELECT COUNT(DISTINCT personid) AS author_counts, SUM(tokens) AS tokens FROM $perFileActivityTable WHERE filename LIKE ?;"
     );
 
     $subDirDateGroupSth = $dbh->prepare(
@@ -401,16 +348,17 @@ sub prepare_dbi {
          AS float) / NULLIF(CAST((SELECT COUNT( DISTINCT originalcid) FROM $perFileActivityTable WHERE filename
          = ?)AS float), 0), 0) AS commit_proportion FROM $perFileActivityTable WHERE filename = ? GROUP BY
          personid ORDER BY tokens DESC), t2 AS (SELECT $directoryTmpTable.rowid-1 AS id, $directoryTmpTable.rowid-1
-         AS color_id, t1.personname, t1.tokens, t1.token_proportion FROM t1 INNER JOIN $directoryTmpTable on
-         (t1.personid=$directoryTmpTable.personid) where id < $authorLimit ORDER BY t1.tokens DESC), t3 AS (SELECT $authorLimit AS id,
-         'Black' AS color_id, 'Others' AS personname, SUM(t1.tokens) AS tokens, SUM(t1.token_proportion) AS
-         token_proportion FROM t1 INNER JOIN $directoryTmpTable on(t1.personid=$directoryTmpTable.personid)
-         WHERE $directoryTmpTable.rowid>$authorLimit) SELECT *, 1 AS od FROM t2 UNION ALL SELECT *, 2 AS od FROM t3
-         WHERE t3.tokens IS NOT NULL ORDER BY od;"
+         AS color_id, t1.personname AS name, t1.tokens, t1.token_proportion, printf(\"%.2f%%\", t1.token_proportion*100)
+         AS token_percent FROM t1 INNER JOIN $directoryTmpTable on (t1.personid=$directoryTmpTable.personid) WHERE
+         id < $authorLimit ORDER BY t1.tokens DESC), t3 AS (SELECT $authorLimit AS id,
+         'Black' AS color_id, 'Others' AS name, SUM(t1.tokens) AS tokens, SUM(t1.token_proportion) AS
+         token_proportion, printf(\"%.2f%%\", SUM(t1.token_proportion)*100) AS token_percent FROM t1 INNER JOIN
+         $directoryTmpTable on(t1.personid=$directoryTmpTable.personid) WHERE $directoryTmpTable.rowid>$authorLimit)
+         SELECT *, 1 AS od FROM t2 UNION ALL SELECT *, 2 AS od FROM t3 WHERE t3.tokens IS NOT NULL ORDER BY od;"
     ); # id|color_id|personname|tokens|token_proportion
 
     $fileCountsSth = $dbh->prepare(
-        "SELECT COUNT(DISTINCT personid) AS author_count, SUM(tokens) AS token_count FROM $perFileActivityTable WHERE filename = ?;"
+        "SELECT COUNT(DISTINCT personid) AS author_counts, SUM(tokens) AS tokens FROM $perFileActivityTable WHERE filename = ?;"
     );
 
     $fileDateGroupSth = $dbh->prepare(
