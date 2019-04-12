@@ -1,0 +1,87 @@
+What data does my scripts need to generate HTML file for one directory:
+	- A table of authors with their color id, name, token number, token proportion, commit number, commit proportion
+	- A list of author names sorted alphabetically
+	- Stats for current directory such as: total author number, total token number and total commit number 
+	- A list of other directories (subdirectory):
+		for each subdirectory:
+			1. A table of trimmed authors with their color id, name, token number, token proportion
+			2. A table of trimmed dategroup Data which contains hashes of date and each hash contains arrays of authors and their corresponding tokens created in that date
+			3. Stats such as total file number and total line number under that directory, and total author number
+			4. Width of its graph for each subdirectory
+	- A list of files:
+		for each file:
+			1. A table of trimmed authors (same as subdirectory)
+			2. A table of trimmed dategroup Data (same as subdirectory)
+			3. Stats such as line number and author number 
+			4. Two widths of its graph for each file, one is for the relationship between files and subdirectories and one is only between files
+	- A breadcrumb array:
+		to show a list of clickable parent paths on browser
+	- The earlest and latest time of commits current directory has. For creating a range of selector for dates 
+
+
+Algorithms:
+
+Per file activity table : contains every commits under every file in a git repository with their author and tokens created.
+example :
+filename|personid|personname|commit|tokens|autdate
+kernel/fork.c|linus torvalds|Linus Torvalds|d92cfbf0a196a0c4400812d153f9678727565b85|2|2003-05-12 00:35:23
+kernel/fork.c|davide libenzi|Davide Libenzi|b8fceee17a310f189188599a8fa5e9beaff57eb0|2|2007-09-20 12:40:16
+kernel/fork.c|linus torvalds|Linus Torvalds|991b3ae8019276269816512425f102c4687f2291|2|2002-02-04 20:11:45
+kernel/fork.c|linus torvalds|Linus Torvalds|ccf7b52b590b4e95a501e24b7c2496aa5da1035d|2|2004-09-13 19:04:35
+kernel/fork.c|luca barbieri|Luca Barbieri|4b95a3f79a98535791fd200a3dd5365418e3f11f|2|2002-11-17 19:07:11
+
+Per file dategroup table: a table with a group of dates along with authors who has created commits on that date and how many tokens he or she has created
+example:
+filename|dategroup|personid|personname|tokens
+kernel/fork.c|2017-08-01 00:00:00|nadav amit|Nadav Amit|1
+kernel/fork.c|2017-09-01 00:00:00|davidlohr bueso|Davidlohr Bueso A|1
+kernel/fork.c|2017-09-01 00:00:00|jerome glisse|Jérôme Glisse|8
+kernel/fork.c|2017-09-01 00:00:00|rik van riel|Rik Van Riel|6
+kernel/fork.c|2017-10-01 00:00:00|konstantin khlebnikov|Konstantin Khlebnikov|12
+
+
+Before processing directories, it is optional to update the activity and dategroup table.
+
+def print_single_dirs:
+	String $dirpath - the directory path to be processed
+	
+	# The table tmp is cleaned and re-used every time the code gets in here
+	create a table of authors with their id, color id, personname, tokens, token proportion, commit, and commit proportion for $dirpath and store it into table tmp
+	
+	get table of trimmed authors with their stats from table tmp
+	get stats such as total author number, total commit number, total token number from table tmp for current directory 
+	
+	int $width - the max number of tokens among files and subdirectories under the current directory 
+	int $widthForFiles - the max number of tokens 
+	array $dirList - list of directories
+	array $fileList - list of files
+	
+	for list of that contains the path for files and subdirectories under current directory:
+		String $path - the path of current item
+		
+		if ($path is directory):
+			get table of trimmed authors with their color id, token number, and token proportion 
+			get trimmed dategroup data 
+			get stats such as line number, file number, token number, and author number
+			push it into the $dirList
+		else if ($path is file):
+			get trimmed authors
+			get trimmed dategroup data
+			get stats such as line number, token number, and author number
+			push it into the $fileList
+			compare and update the $widthForFiles
+		
+		compare and update the $width 
+	
+	update $width and $widthForFiles to both directories and files in $dirList and $fileList
+	
+	generate directory view using HTML::Template
+	
+def print_recursive_dirs:
+	String $dirPath - the starting path of directory
+	
+	print_single_dirs($dirPath);
+	
+	for a list of directories under current directory:
+		String $path - directory path of current item
+		print_recursive_dirs($path);

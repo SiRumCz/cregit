@@ -26,7 +26,6 @@ my $printSingle = 0;
 my $printRecursive = 0;
 my $dbUpdate = 0;
 my $index = 0;
-my $warningCount = 0;
 
 my $printDirPath;
 my $sourceDB;
@@ -83,10 +82,8 @@ sub print_single_dir {
     $directoryData->{breadcrumbs} = $breadcrumbs;
     $directoryData->{path} = $directoryPath;
 
-    print ++$index." : Directory: $breadcrumbsPath\n";
-    print "Getting directory stats..";
+    print ++$index." : $breadcrumbsPath..";
     my ($authors, $stats) = PrettyPrintDirView::get_directory_stats($breadcrumbsPath);
-    print ".Done!\n";
     my ($minTime, $maxTime) = PrettyPrintDirView::get_minmax_time($breadcrumbsPath);
 
     $directoryData->{authors} = dclone $authors;
@@ -118,7 +115,9 @@ sub print_single_dir {
             next if ! -e $dirSourcePath; # skip irrelevant folder(s)
 
             my $contentRelativePath = File::Spec->catdir("root/", substr($contentPath, length $outputDir));
-            print "Subdir : [$contentRelativePath]\n";
+
+            # print "Subdir : [$contentRelativePath]\n";
+
             my ($contentAuthors, $contentStats) = PrettyPrintDirView::get_content_stats($contentRelativePath, 'd');
             my $dateGroups = PrettyPrintDirView::get_content_dategroup($contentRelativePath, 'd');
             my ($fileCount, $lineCount) = get_file_and_line_counts($dirSourcePath);
@@ -138,11 +137,11 @@ sub print_single_dir {
             my $sourceFile = File::Spec->catfile($repoDir, $fileName);
 
             if (! -f $sourceFile) {
-                $warningCount += PrettyPrintDirView::Warning("Missing source file $sourceFile");
+                PrettyPrintDirView::Warning("Missing source file $sourceFile ... skipping");
                 next;
             }
 
-            print "File : [$fileName]\n";
+            # print "File : [$fileName]\n";
 
             my ($contentAuthors, $contentStats) = PrettyPrintDirView::get_content_stats($fileName, 'f');
             my $dateGroups = PrettyPrintDirView::get_content_dategroup($fileName, 'f');
@@ -194,6 +193,7 @@ sub print_single_dir {
 
     # print HTML view
     print_directory($directoryData, \@dirList, \@fileList);
+    print ".Done\n";
 
     closedir($dh);
     return 0;
@@ -214,9 +214,15 @@ sub print_recursive_dirs {
         next if substr($currContent, 0, 1) eq ".";
 
         my $contentPath = File::Spec->catfile($directoryPath, $currContent);
+        my $contentSourcePath = File::Spec->catdir($repoDir, substr($contentPath, length $outputDir));
+
         $printDirPath = File::Spec->catdir("root/", substr($contentPath, length $outputDir));
 
         if (-d $contentPath) {
+            if (! -e $contentSourcePath) {
+                PrettyPrintDirView::Warning("$contentSourcePath does not exist in repository ... skipping");
+                next;
+            }
             print_recursive_dirs();
         }
     }
@@ -225,6 +231,7 @@ sub print_recursive_dirs {
     return 0;
 }
 
+# executing linux find command to get file and lin count
 sub get_file_and_line_counts {
     my $dirSourcePath = shift @_;
     my $fileCount = `find $dirSourcePath -regex \"$findRegex\" | wc -l `+0;
@@ -250,7 +257,6 @@ sub print_directory {
     my $template = HTML::Template->new(filename => $templateFile, %$templateParams);
 
     $template->param(directory_name => $directory->{name});
-    $template->param(web_root => $webRoot);
     $template->param(breadcrumb_nav => $directory->{breadcrumbs});
     $template->param(contributors_by_name => \@contributorsByName);
     $template->param(contributors_count => $directory->{author_counts});
@@ -261,10 +267,10 @@ sub print_directory {
     $template->param(has_file => scalar @fileList);
     $template->param(directory_list => \@sortedDirList);
     $template->param(file_list => \@sortedFileList);
-    $template->param(cregit_version => $cregitVersion);
-    $template->param(has_hidden => (scalar @contributorsByName)>20);
     $template->param(time_min => $directory->{mintime});
     $template->param(time_max => $directory->{maxtime});
+    $template->param(cregit_version => $cregitVersion);
+    $template->param(web_root => $webRoot);
 
     my $file = undef;
 
@@ -279,10 +285,7 @@ sub print_directory {
         $file = *STDOUT;
     }
 
-    print "Generating directory view in [$outputFile]..";
     print $file $template->output();
-    print ".Done! \n";
-
     return 0;
 }
 
@@ -336,7 +339,7 @@ exit pod2usage(-verbose=>1, -exit=>1) if (!defined(@ARGV[1]));
 exit pod2usage(-verbose=>1, -exit=>1) if (not -f @ARGV[1] and not -d @ARGV[1]);
 pre_setup;
 print_recursive_dirs if ($printRecursive);
-print_single_dir;
+print_single_dir if (!$printRecursive);
 print_stats;
 
 
