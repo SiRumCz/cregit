@@ -436,7 +436,7 @@ sub get_cid_meta {
 }
 
 sub setup_dbi {
-	my ($sourceDB, $authorsDB, $queryKey) = @_;
+	my ($sourceDB, $authorsDB) = @_;
 	my $dsn = "dbi:SQLite:dbname=$sourceDB";
 	my $user = "";
 	my $password = "";

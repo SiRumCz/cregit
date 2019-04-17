@@ -138,13 +138,15 @@
                 <thead>
                   <tr>
                     <th>Author Name</th>
+                    <th>Gender</th>
                     <th>Token</th>
                     <th>Token Proportion</th>
                   </tr>
                 </thead>
                 <TMPL_LOOP authors>
                   <tr class="contributor-row">
-                    <td><span class="table-author author<TMPL_VAR color_id> author-label" data-authorId="<TMPL_VAR id>"><TMPL_VAR name></span></td>
+                    <td><span class="table-author author<TMPL_VAR color_id> author-label" data-authorId="<TMPL_VAR id>"><TMPL_VAR ESCAPE=HTML name></span></td>
+                    <td><span class="table-gender gender-label gender-<TMPL_VAR gender>"><TMPL_VAR gender></td>
                     <td><TMPL_VAR tokens></td>
                     <td><TMPL_VAR token_percent></td>
                   </tr>
@@ -153,7 +155,7 @@
                     <tr>
                       <td><b>Total Tokens</b></td>
                       <td><TMPL_VAR tokens></td>
-                      <td>100%</td>
+                      <td></td>
                     </tr>
                   </tfoot>
               </table>
@@ -230,13 +232,15 @@
                 <thead>
                   <tr>
                     <th>Author Name</th>
+                    <th>Gender</th>
                     <th>Token</th>
                     <th>Token Proportion</th>
                   </tr>
                 </thead>
                 <TMPL_LOOP authors>
                   <tr class="contributor-row">
-                    <td><span class="table-author author<TMPL_VAR color_id> author-label" data-authorId="<TMPL_VAR id>"><TMPL_VAR name></span></td>
+                    <td><span class="table-author author<TMPL_VAR color_id> author-label" data-authorId="<TMPL_VAR id>"><TMPL_VAR ESCAPE=HTML name></span></td>
+                    <td><span class="table-gender gender-label gender-<TMPL_VAR gender>"><TMPL_VAR gender></td>
                     <td><TMPL_VAR tokens></td>
                     <td><TMPL_VAR token_percent></td>
                   </tr>
@@ -245,7 +249,7 @@
                     <tr>
                       <td><b>Total Tokens</b></td>
                       <td><TMPL_VAR tokens></td>
-                      <td>100%</td>
+                      <td></td>
                     </tr>
                   </tfoot>
               </table>
@@ -264,6 +268,7 @@
             <thead>
               <tr>
                 <th>Author</th>
+                <th>Gender</th>
                 <th>Tokens</th>
                 <th>Token Proportion</th>
                 <th>Commits</th>
@@ -274,6 +279,7 @@
               <TMPL_LOOP contributors>
                 <tr class="contributor-row">
                   <td><span class="table-author author<TMPL_VAR color_id> author-label" data-authorId="<TMPL_VAR id>"><TMPL_VAR ESCAPE=HTML name></span></td>
+                  <td><span class="table-gender gender-label gender-<TMPL_VAR gender>"><TMPL_VAR gender></span></td>
                   <td><TMPL_VAR tokens></td>
                   <td><TMPL_VAR token_percent></td>
                   <td><TMPL_VAR commits></td>
@@ -284,6 +290,7 @@
             <tfoot>
               <tr>
                 <td>Total</td>
+                <td></td>
                 <td><TMPL_VAR total_tokens></td>
                 <td></td>
                 <td><TMPL_VAR total_commits></td>

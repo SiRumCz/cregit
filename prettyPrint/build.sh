@@ -21,7 +21,7 @@ BLAMETOKENS_DB="${HOME_REPO}/v2.17/blame-tokens.db"
 #ORIGINAL_REPO="${HOME_REPO}/linux-zkchen"
 #BLAME_DIRECTORY="${HOME_REPO}/4.17/blame"
 #TOKEN_DIRECTORY="${HOME_REPO}/4.17/token.withLines"
-#PERSONS_DB="${HOME_REPO}/linux-persons.db"
+#PERSONS_DB="${HOME_REPO}/linux-persons-gender.db"
 #TOKEN_DB="${HOME_REPO}/token.db"
 #BLAMETOKENS_DB="${HOME_REPO}/blame_4_17.db"
 

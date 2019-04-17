@@ -33,6 +33,10 @@
 	color: #DDDDDD;
 }
 
+.gender-label {
+	color: var(--gender-color);
+}
+
 .color-graph-fade {
 	background-color: #dddddd !important;
 }
@@ -43,6 +47,10 @@
 
 .color-graph-author {
 	background-color: var(--author-color);
+}
+
+.color-graph-gender {
+	background-color: var(--gender-color);
 }
 
 .author0 { --author-color: hsl(017, 097%, 044%); }
@@ -106,4 +114,8 @@
 .author58 { --author-color: hsl(112, 052%, 031%); }
 .author59 { --author-color: hsl(151, 071%, 039%); }
 .author60 { --author-color: hsl(078, 058%, 049%); }
-.authorBlack { --author-color: #4f4f4f; } /* selected authors ranked below 60 */
+.authorBlack { --author-color: hsl(000, 00%, 031%); } /* selected authors ranked below 60 */
+
+.gender-male { --gender-color: hsl(197, 073%, 050%); }
+.gender-female { --gender-color: hsl(349, 098%, 052%); }
+.gender-others { --gender-color: hsl(000, 00%, 031%); }

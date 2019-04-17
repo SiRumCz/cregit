@@ -61,15 +61,15 @@ sub get_content_stats {
     my $bindingVar2;
     my $result;
     my $authorsMeta;
+
+    # fetch authors
     if ('f' eq $type) {
         $bindingVar1 = "root/".$contentPath;
-        # fetch authors
         $result = $fileAuthorsSth->execute($bindingVar1, $bindingVar1);
         $authorsMeta = $fileAuthorsSth->fetchall_arrayref({});
     } elsif ('d' eq $type) {
         $bindingVar1 = $contentPath."/";
         $bindingVar2 = $bindingVar1."{";
-        # fetch authors
         $result = $subDirAuthorsSth->execute($bindingVar1, $bindingVar2, $bindingVar1, $bindingVar2);
         $authorsMeta = $subDirAuthorsSth->fetchall_arrayref({});
     }
@@ -182,6 +182,11 @@ sub get_content_dategroup {
     return [@dateGroups];
 }
 
+sub get_content_gendergroup {
+    my $contentPath = shift @_;
+    my $type = shift @_;
+}
+
 # get breadcrumbs for HTML view
 sub get_breadcrumbs {
     my $dirPath = shift @_;
@@ -248,11 +253,16 @@ sub setup_dbi {
     $dbh->do("attach database '$sourceDB' as sourcedb;");
     $dbh->do("attach database '$blametokensDB' as blametokensdb;");
 
+    $dbh->do("DROP TABLE IF EXISTS $perFileActivityTable");
+    $dbh->do("DROP TABLE IF EXISTS $dategroupTable");
+    $dbh->do("DROP TABLE IF EXISTS $directoryTmpTable");
+
     $dbh->do(
         "CREATE TABLE IF NOT EXISTS $perFileActivityTable (
         filename text,
         personid text,
         personname text,
+        persongender text,
         originalcid text,
         tokens int,
         autdate text);"
@@ -271,6 +281,7 @@ sub setup_dbi {
         "CREATE TABLE IF NOT EXISTS $directoryTmpTable (
         personid text,
         personname text,
+        persongender text,
         tokens int,
         token_proportion text,
         commits int,
@@ -287,7 +298,7 @@ sub per_file_activity_dbi {
     $dbh->do(
         "WITH t1 AS (SELECT filename, cid, COUNT(cid) AS tokenspercid FROM blametoken
         GROUP BY filename, cid) INSERT INTO $perFileActivityTable SELECT 'root/'||filename,
-        personid, COALESCE(personname, 'Unknown'), originalcid, tokenspercid AS tokens,
+        personid, COALESCE(personname, 'Unknown'), COALESCE(gender, 'Unknown'), originalcid, tokenspercid AS tokens,
         autdate FROM t1 LEFT JOIN commits ON (t1.cid=commits.cid) LEFT JOIN commitmap
         ON (t1.cid=commitmap.cid) LEFT JOIN emails ON (autname=emailname AND autemail
         =emailaddr) LEFT JOIN persons USING (personid) ORDER BY filename, tokens DESC;"
@@ -315,27 +326,27 @@ sub create_directory_table_dbi {
     $dbh->do(
         "WITH stats AS (SELECT SUM(tokens) AS tokens, COUNT( DISTINCT originalcid) AS commits FROM
         $perFileActivityTable WHERE filename between $bindingVar1 AND $bindingVar2) INSERT INTO $directoryTmpTable
-        SELECT personid, personname, SUM(tokens) AS tokens, COALESCE(CAST(SUM(tokens) AS float) /
+        SELECT personid, personname, persongender, SUM(tokens) AS tokens, COALESCE(CAST(SUM(tokens) AS float) /
         NULLIF(CAST((SELECT tokens FROM stats) AS float) , 0), 0) AS token_proportion, COUNT(
         DISTINCT originalcid) AS commits, COALESCE(CAST(COUNT(DISTINCT originalcid) AS float)
         / NULLIF(CAST((SELECT commits FROM stats) AS float), 0), 0) AS commit_proportion FROM
         $perFileActivityTable WHERE filename between $bindingVar1 AND $bindingVar2 GROUP BY personid ORDER BY tokens DESC;"
-    ); # personid|personname|tokens|token_proportion|commits|commit_proportion
+    ); # personid|personname|persongender|tokens|token_proportion|commits|commit_proportion
 
     return prepare_dbi();
 }
 
 sub prepare_dbi {
     $dirAuthorsSth = $dbh->prepare(
-        "WITH t1 AS (SELECT rowid-1 AS id, rowid-1 AS color_id, personname AS name, tokens, token_proportion,
+        "WITH t1 AS (SELECT rowid-1 AS id, rowid-1 AS color_id, personname AS name, persongender AS gender, tokens, token_proportion,
         printf(\"%.2f%%\", token_proportion*100) AS token_percent, commits, commit_proportion, printf(\"%.2f%%\",
         commit_proportion*100) AS commit_percent FROM $directoryTmpTable LIMIT $authorLimit), t2 AS (SELECT
-        $authorLimit AS id, 'Black' AS color_id, 'Others' AS name, SUM(tokens) AS tokens, SUM(token_proportion)
+        $authorLimit AS id, 'Black' AS color_id, 'Others' AS name, 'others' AS gender, SUM(tokens) AS tokens, SUM(token_proportion)
         AS token_proportion, printf(\"%.2f%%\", SUM(token_proportion)*100) AS token_percent , SUM(commits) AS commits,
         SUM(commit_proportion) AS commit_proportion, printf(\"%.2f%%\", SUM(commit_proportion)*100) AS commit_percent
         FROM $directoryTmpTable WHERE rowid > $authorLimit) SELECT *, 1 AS od FROM t1 UNION ALL SELECT *, 2 AS od
         FROM t2 WHERE t2.tokens IS NOT NULL ORDER BY od;"
-    ); # id|color_id|personname|tokens|token_proportion|commits|commit_proportion
+    ); # id|color_id|name|gender|tokens|token_proportion|commits|commit_proportion
 
     $dirStatsCountSth = $dbh->prepare(
         "SELECT COUNT(DISTINCT personid) AS author_counts, SUM(commits) AS commit_counts, SUM(tokens) AS tokens FROM $directoryTmpTable;"
@@ -343,19 +354,19 @@ sub prepare_dbi {
 
     $subDirAuthorsSth = $dbh->prepare(
         "WITH stats AS (SELECT SUM(tokens) AS tokens, COUNT(originalcid) AS commits FROM $perFileActivityTable
-        WHERE filename BETWEEN ? AND ?), t1 AS (SELECT personid, personname, SUM(tokens) AS tokens, COALESCE(CAST(SUM(tokens) AS float)
+        WHERE filename BETWEEN ? AND ?), t1 AS (SELECT personid, personname, persongender, SUM(tokens) AS tokens, COALESCE(CAST(SUM(tokens) AS float)
         / NULLIF(CAST((SELECT tokens FROM stats) AS float) , 0), 0) AS token_proportion, COUNT(DISTINCT originalcid) AS commits,
         COALESCE(CAST(COUNT(DISTINCT originalcid) AS float) / NULLIF(CAST((SELECT commits FROM stats) AS float), 0), 0)
         AS commit_proportion FROM $perFileActivityTable WHERE filename BETWEEN ? AND ? GROUP BY personid ORDER BY tokens DESC), t2 AS
         (SELECT $directoryTmpTable.rowid-1 AS id, $directoryTmpTable.rowid-1
-        AS color_id, t1.personname AS name, t1.tokens, t1.token_proportion, printf(\"%.2f%%\", t1.token_proportion*100)
+        AS color_id, t1.personname AS name, t1.persongender AS gender, t1.tokens, t1.token_proportion, printf(\"%.2f%%\", t1.token_proportion*100)
         AS token_percent FROM t1 INNER JOIN $directoryTmpTable on (t1.personid=$directoryTmpTable.personid) WHERE
         id < $authorLimit ORDER BY t1.tokens DESC), t3 AS (SELECT $authorLimit AS id,
-        'Black' AS color_id, 'Others' AS name, SUM(t1.tokens) AS tokens, SUM(t1.token_proportion) AS
+        'Black' AS color_id, 'Others' AS name, 'others' AS gender, SUM(t1.tokens) AS tokens, SUM(t1.token_proportion) AS
         token_proportion, printf(\"%.2f%%\", SUM(t1.token_proportion)*100) AS token_percent FROM t1 INNER JOIN
         $directoryTmpTable on(t1.personid=$directoryTmpTable.personid) WHERE $directoryTmpTable.rowid > $authorLimit)
         SELECT *, 1 AS od FROM t2 UNION ALL SELECT *, 2 AS od FROM t3 WHERE t3.tokens IS NOT NULL ORDER BY od;"
-    ); # id|color_id|personname|tokens|token_proportion
+    ); # id|color_id|personname|gender|tokens|token_proportion
 
     $subDirCountsSth = $dbh->prepare(
         "SELECT COUNT(DISTINCT personid) AS author_counts, SUM(tokens) AS tokens FROM $perFileActivityTable WHERE filename BETWEEN ? AND ?;"
@@ -369,19 +380,19 @@ sub prepare_dbi {
 
     $fileAuthorsSth = $dbh->prepare(
         "WITH stats AS (SELECT SUM(tokens) AS tokens, COUNT(originalcid) AS commits FROM $perFileActivityTable
-        WHERE filename = ?), t1 AS (SELECT personid, personname, SUM(tokens) AS tokens, COALESCE(CAST(SUM(tokens) AS float)
+        WHERE filename = ?), t1 AS (SELECT personid, personname, persongender, SUM(tokens) AS tokens, COALESCE(CAST(SUM(tokens) AS float)
         / NULLIF(CAST((SELECT tokens FROM stats) AS float) , 0), 0) AS token_proportion, COUNT(DISTINCT originalcid) AS commits,
         COALESCE(CAST(COUNT(DISTINCT originalcid) AS float) / NULLIF(CAST((SELECT commits FROM stats) AS float), 0), 0)
         AS commit_proportion FROM $perFileActivityTable WHERE filename = ? GROUP BY personid ORDER BY tokens DESC), t2 AS
         (SELECT $directoryTmpTable.rowid-1 AS id, $directoryTmpTable.rowid-1
-        AS color_id, t1.personname AS name, t1.tokens, t1.token_proportion, printf(\"%.2f%%\", t1.token_proportion*100)
+        AS color_id, t1.personname AS name, t1.persongender AS gender, t1.tokens, t1.token_proportion, printf(\"%.2f%%\", t1.token_proportion*100)
         AS token_percent FROM t1 INNER JOIN $directoryTmpTable on (t1.personid=$directoryTmpTable.personid) WHERE
         id < $authorLimit ORDER BY t1.tokens DESC), t3 AS (SELECT $authorLimit AS id,
-        'Black' AS color_id, 'Others' AS name, SUM(t1.tokens) AS tokens, SUM(t1.token_proportion) AS
+        'Black' AS color_id, 'Others' AS name, 'others' AS gender, SUM(t1.tokens) AS tokens, SUM(t1.token_proportion) AS
         token_proportion, printf(\"%.2f%%\", SUM(t1.token_proportion)*100) AS token_percent FROM t1 INNER JOIN
         $directoryTmpTable on(t1.personid=$directoryTmpTable.personid) WHERE $directoryTmpTable.rowid>$authorLimit)
         SELECT *, 1 AS od FROM t2 UNION ALL SELECT *, 2 AS od FROM t3 WHERE t3.tokens IS NOT NULL ORDER BY od;"
-    ); # id|color_id|personname|tokens|token_proportion
+    ); # id|color_id|personname|gender|tokens|token_proportion
 
     $fileCountsSth = $dbh->prepare(
         "SELECT COUNT(DISTINCT personid) AS author_counts, SUM(tokens) AS tokens FROM $perFileActivityTable WHERE filename = ?;"
