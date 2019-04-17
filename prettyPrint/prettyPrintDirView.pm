@@ -14,9 +14,11 @@ my $dirStatsCountSth;
 my $subDirAuthorsSth;
 my $subDirCountsSth;
 my $subDirDateGroupSth;
+my $subDirGenderGroupSth;
 my $fileAuthorsSth;
 my $fileCountsSth;
 my $fileDateGroupSth;
+my $fileGenderGroupSth;
 my $minTimeSth;
 my $maxTimeSth;
 
@@ -24,6 +26,7 @@ my $perFileActivityDB = "activity.db";
 my $perFileActivityTable = "perfileactivity";
 my $dategroupTable = "perfiledategroup";
 my $directoryTmpTable = "tmp";
+my $directoryTmpStatsTable = "tmpStats";
 my $authorLimit = 60; # max number of authors to keep for each directory
 
 # return authors list and stats (author count, commit count, token count)
@@ -256,6 +259,7 @@ sub setup_dbi {
     $dbh->do("DROP TABLE IF EXISTS $perFileActivityTable");
     $dbh->do("DROP TABLE IF EXISTS $dategroupTable");
     $dbh->do("DROP TABLE IF EXISTS $directoryTmpTable");
+    $dbh->do("DROP TABLE IF EXISTS $directoryTmpStatsTable");
 
     $dbh->do(
         "CREATE TABLE IF NOT EXISTS $perFileActivityTable (
@@ -287,13 +291,20 @@ sub setup_dbi {
         commits int,
         commit_proportion text);"
     );
+
+    $dbh->do(
+        "CREATE TABLE IF NOT EXISTS $directoryTmpStatsTable (
+        total_tokens int,
+        total_commits int
+        );"
+    );
 }
 
 sub per_file_activity_dbi {
-    $dbh->do("DELETE FROM $perFileActivityTable;");
-    $dbh->do("DELETE FROM $dategroupTable;");
     $dbh->do("DROP INDEX IF EXISTS f_act_index;");
     $dbh->do("DROP INDEX IF EXISTS f_dg_index;");
+    $dbh->do("DELETE FROM $perFileActivityTable;");
+    $dbh->do("DELETE FROM $dategroupTable;");
     # perfileactivity table : filename|personid|personname|originalcid|tokens in this commit|autdate
     $dbh->do(
         "WITH t1 AS (SELECT filename, cid, COUNT(cid) AS tokenspercid FROM blametoken
@@ -303,18 +314,15 @@ sub per_file_activity_dbi {
         ON (t1.cid=commitmap.cid) LEFT JOIN emails ON (autname=emailname AND autemail
         =emailaddr) LEFT JOIN persons USING (personid) ORDER BY filename, tokens DESC;"
     );
+    # perfiledategroup table : filename|dategroup|personid|personname|tokens
     $dbh->do(
         "WITH t1 AS (SELECT *, SUBSTR(autdate, 1, 7)||'-01 00:00:00' AS dategroup FROM
         $perFileActivityTable) INSERT INTO $dategroupTable SELECT filename, t1.dategroup
         AS dategroup, personid, personname, SUM(tokens) AS tokens FROM t1 GROUP BY filename,
         t1.dategroup, personid ORDER BY filename, dategroup;"
     );
-    $dbh->do(
-        "CREATE INDEX f_act_index ON $perFileActivityTable (filename);"
-    );
-    $dbh->do(
-        "CREATE INDEX f_dg_index ON $dategroupTable (filename);"
-    );
+    $dbh->do("CREATE INDEX f_act_index ON $perFileActivityTable (filename);");
+    $dbh->do("CREATE INDEX f_dg_index ON $dategroupTable (filename);");
 }
 
 sub create_directory_table_dbi {
@@ -323,6 +331,8 @@ sub create_directory_table_dbi {
     my $bindingVar2 = "\'".$dirPath."/{\'";
 
     $dbh->do("DELETE FROM $directoryTmpTable;");
+    $dbh->do("DELETE FROM $directoryTmpStatsTable;");
+    $dbh->do();
     $dbh->do(
         "WITH stats AS (SELECT SUM(tokens) AS tokens, COUNT( DISTINCT originalcid) AS commits FROM
         $perFileActivityTable WHERE filename between $bindingVar1 AND $bindingVar2) INSERT INTO $directoryTmpTable
@@ -376,6 +386,10 @@ sub prepare_dbi {
         "SELECT t1.dategroup, t2.rowid-1 AS id, SUM(t1.tokens) AS tokens FROM $dategroupTable AS t1 INNER JOIN
         $directoryTmpTable AS t2 ON(t1.personid=t2.personid) WHERE filename BETWEEN ? AND ? GROUP BY t1.dategroup, t1.personid
         ORDER BY t1.dategroup;"
+    );
+
+    $subDirGenderGroupSth = $dbh->prepare(
+        "WITH "
     );
 
     $fileAuthorsSth = $dbh->prepare(
