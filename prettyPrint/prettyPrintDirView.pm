@@ -402,10 +402,16 @@ sub prepare_dbi {
 
     $subDirGenderGroupSth = $dbh->prepare(
         "WITH male AS (SELECT 'male' AS gendergroup, SUM(tokens) AS tokens FROM $directoryTmpTable WHERE
-        persongender='male' AND rowid <= $authorLimit), female AS (SELECT 'female' AS gendergroup, SUM(tokens)
-        AS tokens FROM $directoryTmpTable WHERE (filename BETWEEN ? AND ?) AND persongender='female' AND
-        rowid <= $authorLimit), others AS (SELECT 'others' AS gendergroup, SUM(tokens) AS tokens FROM
-        $directoryTmpTable WHERE rowid > $authorLimit);"
+        (filename BETWEEN ? AND ?) AND persongender = 'male' AND rowid <= $authorLimit), female AS (SELECT
+        'female' AS gendergroup, SUM(tokens) AS tokens FROM $directoryTmpTable WHERE (filename BETWEEN ?
+        AND ?) AND persongender = 'female' AND rowid <= $authorLimit), others AS (SELECT 'others' AS gendergroup,
+        SUM(tokens) AS tokens FROM $directoryTmpTable WHERE (filename BETWEEN ? AND ?) AND rowid > $authorLimit)
+        SELECT *, printf(\"%.2f%%\", COALESCE(CAST(tokens AS float) / NULLIF(CAST((SELECT tokens FROM
+        $directoryTmpStatsTable) AS float), 0), 0)*100) AS token_percent, 1 AS od FROM male UNION ALL SELECT *,
+        printf(\"%.2f%%\", COALESCE(CAST(tokens AS float) / NULLIF(CAST((SELECT tokens FROM $directoryTmpStatsTable
+        ) AS float), 0), 0)*100) AS token_percent, 2 AS od FROM female UNION ALL SELECT *, printf(\"%.2f%%\",
+        COALESCE(CAST(tokens AS float) / NULLIF(CAST((SELECT tokens FROM $directoryTmpStatsTable) AS float), 0)
+        , 0)*100) AS token_percent, 3 AS od FROM others WHERE others.tokens IS NOT NULL ORDER BY od;"
     );
 
     $fileAuthorsSth = $dbh->prepare(
