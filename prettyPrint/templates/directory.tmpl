@@ -53,6 +53,7 @@
         <option value="reset">Reset All</option>
         <option value="author" selected="selected">By Author</option>
         <option value="age">By Age</option>
+        <option value="gender">By Gender</option>
         <option disabled>──────────</option>
         <TMPL_LOOP contributors_by_name>
             <option id="<TMPL_VAR id>"><TMPL_VAR ESCAPE=HTML name></option>
@@ -116,12 +117,13 @@
                     <button class="content-stats-graph" style="width: <TMPL_VAR width>;">
                       <TMPL_LOOP authors><span class="author-highlighting content-span color-graph-author author<TMPL_VAR color_id>" style="width: <TMPL_VAR token_percent>;" title="<TMPL_VAR name> : <TMPL_VAR tokens> token(s)" data-aid="<TMPL_VAR id>" data-total-tokens="<TMPL_VAR tokens>"  data-width-percent="<TMPL_VAR token_percent>"><TMPL_VAR name></span></TMPL_LOOP>
                       <TMPL_LOOP dateGroups><span class="age-highlighting content-span color-graph-age hidden" style="width: <TMPL_VAR width>" title="<TMPL_VAR timestr> : <TMPL_VAR total_tokens> token(s)" data-timestamp="<TMPL_VAR timestamp>"><TMPL_VAR timestr></span></TMPL_LOOP>
+                      <TMPL_LOOP genderGroups><span class="gender-highlighting content-span color-graph-gender gender-<TMPL_VAR gendergroup> hidden" style="width: <TMPL_VAR token_percent>;" title="<TMPL_VAR gendergroup> : <TMPL_VAR tokens> token(s) and <TMPL_VAR token_percent> of token contributions" data-gender="<TMPL_VAR gendergroup>"><TMPL_VAR gendergroup></span></TMPL_LOOP>
                       <div id="data-script" class="hidden">
                         var spanGroupData = [
                           <TMPL_LOOP dateGroups>
                           {"timestamp": <TMPL_VAR timestamp>, "group": [
                             <TMPL_LOOP group>
-                              {"author_id": <TMPL_VAR author_id>, "token_count": <TMPL_VAR token_count>},
+                              {"author_id": <TMPL_VAR author_id>, "author_gender": "<TMPL_VAR author_gender>", "token_count": <TMPL_VAR token_count>},
                             </TMPL_LOOP>
                             ]},
                           </TMPL_LOOP>
@@ -209,14 +211,15 @@
                   </td>
                   <td class="graph-table-data">
                     <button class="content-stats-graph file-list" style="width: <TMPL_VAR width>;" data-content-width="<TMPL_VAR width>" data-file-width="<TMPL_VAR width_in_files>">
-                      <TMPL_LOOP authors><span  class="author-highlighting content-span color-graph-author author<TMPL_VAR color_id>" style="width: <TMPL_VAR token_percent>;" title="<TMPL_VAR name> : <TMPL_VAR tokens> token(s)" data-aid="<TMPL_VAR id>" data-total-tokens="<TMPL_VAR tokens>" data-width-percent="<TMPL_VAR token_percent>"><TMPL_VAR name></span></TMPL_LOOP>
-                      <TMPL_LOOP dateGroups><span  class="age-highlighting content-span color-graph-age hidden" style="width: <TMPL_VAR width>" title="<TMPL_VAR timestr> : <TMPL_VAR total_tokens> token(s)" data-timestamp="<TMPL_VAR timestamp>"><TMPL_VAR timestr></span></TMPL_LOOP>
+                      <TMPL_LOOP authors><span class="author-highlighting content-span color-graph-author author<TMPL_VAR color_id>" style="width: <TMPL_VAR token_percent>;" title="<TMPL_VAR name> : <TMPL_VAR tokens> token(s)" data-aid="<TMPL_VAR id>" data-total-tokens="<TMPL_VAR tokens>" data-width-percent="<TMPL_VAR token_percent>"><TMPL_VAR name></span></TMPL_LOOP>
+                      <TMPL_LOOP dateGroups><span class="age-highlighting content-span color-graph-age hidden" style="width: <TMPL_VAR width>" title="<TMPL_VAR timestr> : <TMPL_VAR total_tokens> token(s)" data-timestamp="<TMPL_VAR timestamp>"><TMPL_VAR timestr></span></TMPL_LOOP>
+                      <TMPL_LOOP genderGroups><span class="gender-highlighting content-span color-graph-gender gender-<TMPL_VAR gendergroup> hidden" style="width: <TMPL_VAR token_percent>;" title="<TMPL_VAR gendergroup> : <TMPL_VAR tokens> token(s) and <TMPL_VAR token_percent> of token contributions" data-gender="<TMPL_VAR gendergroup>"><TMPL_VAR gendergroup></span></TMPL_LOOP>
                       <div id="data-script" class="hidden">
                         var spanGroupData = [
                           <TMPL_LOOP dateGroups>
                           {"timestamp": <TMPL_VAR timestamp>, "group": [
                             <TMPL_LOOP group>
-                              {"author_id": <TMPL_VAR author_id>, "token_count": <TMPL_VAR token_count>},
+                              {"author_id": <TMPL_VAR author_id>, "author_gender": "<TMPL_VAR author_gender>", "token_count": <TMPL_VAR token_count>},
                             </TMPL_LOOP>
                             ]},
                           </TMPL_LOOP>

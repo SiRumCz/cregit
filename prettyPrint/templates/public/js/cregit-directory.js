@@ -31,8 +31,9 @@ $(document).ready(function() {
 	var $absPropToggle = $("#abs-prop-toggle");
 	var $hideSubDirButton = $("#hide-subdirectory-btn");
 	var $graphTableData = $(".graph-table-data");
-	var $ageHighlighting = $(".age-highlighting");
 	var $authorHighlighting = $(".author-highlighting");
+	var $ageHighlighting = $(".age-highlighting");
+	var $genderHighlighting = $(".gender-highlighting");
 	var $expandableTables = $("table.expandable");
 	var $statsTableExpandableButton = $("button.expand-collapse-table-btn");
 	var $contentListHeader = $("#content-list-header");
@@ -81,7 +82,10 @@ $(document).ready(function() {
 			var date = new Date(timestamp * 1000);
 			var dateOkay = date >= dateFrom && date <= dateTo;
 			var authorOkay = group.find(function(authorToken) {
-				return authorToken.author_id == authorId;
+				if (highlightMode === "gender")
+					return authorToken.author_gender === authorGender;
+				else
+					return authorToken.author_id === authorId;
 			});
 			return dateOkay && (undefined != authorOkay);
 		}
@@ -95,17 +99,49 @@ $(document).ready(function() {
 			tokenCount = 0;
 			matchedGroup.forEach(function(dateGroup) {
 				var authorToken = dateGroup.group.find(function(authorToken) {
-					return authorToken.author_id == authorId;
+					return authorToken.author_id === authorId;
 				});
 				tokenCount += authorToken.token_count;
 			});
 			
-			return tokenCount/totalTokens; 
+			return (totalTokens === 0) ? 0 : tokenCount/totalTokens;
+		}
+
+		function getTotalTokensInPeriod() {
+			var matchedGroup = spanGroupData.filter(function(dateGroup) {
+				var timestamp = dateGroup.timestamp;
+				var date = new Date(timestamp * 1000);
+
+				return date >= dateFrom && date <= dateTo;
+			});
+
+			var tokens = 0;
+			matchedGroup.forEach(function(dateGroup) {
+				dateGroup.group.forEach(function(author) {
+					tokens += author.token_count;
+				});
+			});
+
+			return tokens;
+		}
+
+		function getGenderSpanTokenCount(jquery) {
+			var authorGender = jquery.data("gender");
+
+			var tokenCount = 0;
+			var matchedGroup = spanGroupData.filter(groupMatch);
+			matchedGroup.forEach(function (dateGroup) {
+				dateGroup.group.forEach(function(author) {
+					if (author.author_gender === authorGender) { tokenCount += author.token_count; }
+				});
+			});
+
+			return tokenCount;
 		}
 
 		if (highlightMode == "age") {
 			var spanGroup = $(this).children(".age-highlighting");
-			spanGroup.each(function() {
+			spanGroup.each(function () {
 				var colorSpan = $(this);
 				var spanTimestamp = colorSpan.data("timestamp");
 				var date = new Date(spanTimestamp * 1000);
@@ -114,7 +150,30 @@ $(document).ready(function() {
 				var allOkay = dateOkay;
 
 				colorSpan.removeClass("hideen");
-				if (!allOkay) { colorSpan.addClass("hidden"); }
+				if (!allOkay) {
+					colorSpan.addClass("hidden");
+				}
+			});
+		} else if (highlightMode == "gender") {
+			var dataScript = $(this).children("#data-script");
+			if (dateChanged) { eval(dataScript.html()); }
+
+			var authorGender;
+			var tokenCount;
+			var totalTokens = getTotalTokensInPeriod();
+
+			var spanGroup = $(this).children(".gender-highlighting");
+			spanGroup.each(function() {
+				var colorSpan = $(this);
+				authorGender = colorSpan.data("gender");
+				tokenCount = getGenderSpanTokenCount(colorSpan);
+
+				if (dateChanged) {
+					var newLenPercentage = (totalTokens === 0) ? 0 : 100*tokenCount/totalTokens;
+
+					colorSpan.css("width", newLenPercentage+"%");
+					colorSpan.prop("title", authorGender+" : "+tokenCount+" token(s) and "+newLenPercentage.toFixed(2)+"% of token contributions");
+				}
 			});
 		} else if (highlightMode == "author" || undefined != selectedAuthorId) {
 			var dataScript = $(this).children("#data-script");
@@ -190,29 +249,53 @@ $(document).ready(function() {
 			$authorHighlighting.each(function() {
 				$(this).addClass("hidden");
 			});
+			$genderHighlighting.each(function() {
+				$(this).addClass("hidden");
+			});
 
 			if(lastMode != "age") {
 				dateChanged = true;
 			}
 		}
 		else if (highlightMode == "author") {
+			$authorHighlighting.each(function() {
+				$(this).removeClass("hidden");
+			});
 			$ageHighlighting.each(function() {
 				$(this).addClass("hidden");
 			});
-			$authorHighlighting.each(function() {
-				$(this).removeClass("hidden");
+			$genderHighlighting.each(function() {
+				$(this).addClass("hidden");
 			});
 
 			if (lastMode != "author") {
 				dateChanged = true;
 			}
 		}
-		else if (highlightMode == "author-single") {
+		else if (highlightMode == "gender") {
+			$genderHighlighting.each(function() {
+				$(this).removeClass("hidden");
+			});
 			$ageHighlighting.each(function() {
 				$(this).addClass("hidden");
 			});
 			$authorHighlighting.each(function() {
+				$(this).addClass("hidden");
+			});
+
+			if (lastMode != "gender") {
+				dateChanged = true;
+			}
+		}
+		else if (highlightMode == "author-single") {
+			$authorHighlighting.each(function() {
 				$(this).removeClass("hidden");
+			});
+			$ageHighlighting.each(function() {
+				$(this).addClass("hidden");
+			});
+			$genderHighlighting.each(function() {
+				$(this).addClass("hidden");
 			});
 
 			if (lastMode != "author-single") {
@@ -330,8 +413,9 @@ $(document).ready(function() {
 	function SortContributors(column, reverse)
 	{
 		var cmp = function(a, b) { if (a < b) return -1; if (a > b) return 1; return 0; };
-		var lexical = function (a, b) { 
-			return a.children[0].firstChild.innerText.localeCompare(b.children[0].firstChild.innerText); 
+		var lexical = function (a, b) {
+			var pos = (column === 0 || column === 1)? column : 0;
+			return a.children[pos].firstChild.innerText.localeCompare(b.children[pos].firstChild.innerText);
 		};
 		var numeric = function (a, b) { return cmp(parseFloat(b.children[column].innerHTML), parseFloat(a.children[column].innerHTML)); };
 		var numericThenLex = function (a, b) { return numeric(a, b) || lexical(a, b); };
@@ -341,7 +425,7 @@ $(document).ready(function() {
 		var rows = $contributor_rows.get();
 		rows.forEach(function(x, i) { $(x).removeClass("hidden"); });
 		
-		if (column == 0)
+		if (column === 0 || column === 1)
 			rows.sort(lexical);
 		else
 			rows.sort(numericThenLex);
@@ -350,7 +434,7 @@ $(document).ready(function() {
 		
 		// Pad up to 6 rows using the longest name for visual stability.
 		while (rows.length < Math.min(6, $rows.length))
-			rows.push($("<tr class='contributor-row'><td>&nbsp</td><td/><td/><td/><td/></tr>").get(0));
+			rows.push($("<tr class='contributor-row'><td>&nbsp</td><td/><td/><td/><td/><td/></tr>").get(0));
 		
 		$rows.detach(); // Detach before empty so rows don't get deleted
 		$contributor_row_container.children("tr.contributor-row").empty();

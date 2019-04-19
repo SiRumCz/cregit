@@ -121,6 +121,7 @@ sub print_single_dir {
 
             my ($contentAuthors, $contentStats) = PrettyPrintDirView::get_content_stats($contentRelativePath, 'd');
             my $dateGroups = PrettyPrintDirView::get_content_dategroup($contentRelativePath, 'd');
+            my $genderGroups = PrettyPrintDirView::get_content_gendergroup($contentRelativePath, 'd');
             my ($fileCount, $lineCount) = get_file_and_line_counts($dirSourcePath);
 
             $content = content_object($currContent);
@@ -131,6 +132,7 @@ sub print_single_dir {
             $content->{dateGroups} = dclone $dateGroups;
             $content->{line_counts} = $lineCount;
             $content->{file_counts} = $fileCount;
+            $content->{genderGroups} = dclone $genderGroups;
 
             push(@dirList, dclone $content);
         } elsif (-f $contentPath and $contentPath =~ /$filter/) {
@@ -146,6 +148,7 @@ sub print_single_dir {
 
             my ($contentAuthors, $contentStats) = PrettyPrintDirView::get_content_stats($fileName, 'f');
             my $dateGroups = PrettyPrintDirView::get_content_dategroup($fileName, 'f');
+            my $genderGroups = PrettyPrintDirView::get_content_gendergroup($fileName, 'f');
 
             $content = content_object(basename($fileName));
             my $fileLines = `wc -l < $sourceFile;`+0;
@@ -156,6 +159,7 @@ sub print_single_dir {
             $content->{url} = "./".basename($contentPath);
             $content->{authors} = dclone $contentAuthors;
             $content->{dateGroups} = dclone $dateGroups;
+            $content->{genderGroups} = dclone $genderGroups;
 
             push(@fileList, dclone $content);
             $fileTokenLen = ($content->{tokens} > $fileTokenLen) ? $content->{tokens} : $fileTokenLen;
