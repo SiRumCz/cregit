@@ -317,7 +317,7 @@ sub per_file_activity_dbi {
     $dbh->do(
         "WITH t1 AS (SELECT filename, cid, COUNT(cid) AS tokenspercid FROM blametoken
         GROUP BY filename, cid) INSERT INTO $perFileActivityTable SELECT 'root/'||filename,
-        personid, COALESCE(personname, 'Unknown'), COALESCE(gender, 'Unknown'), originalcid, tokenspercid AS tokens,
+        personid, COALESCE(personname, 'Unknown'), COALESCE(gender, 'unknown'), originalcid, tokenspercid AS tokens,
         autdate FROM t1 LEFT JOIN commits ON (t1.cid=commits.cid) LEFT JOIN commitmap
         ON (t1.cid=commitmap.cid) LEFT JOIN emails ON (autname=emailname AND autemail
         =emailaddr) LEFT JOIN persons USING (personid) ORDER BY filename, tokens DESC;"
