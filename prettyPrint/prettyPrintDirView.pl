@@ -281,7 +281,7 @@ sub print_directory {
     }
 
     if ($outputFile ne "") {
-        open($file, ">", $outputFile) or return PrettyPrint::Error("cannot write to [$outputFile]");
+        open($file, ">", $outputFile) or return PrettyPrintDirView::Error("cannot write to [$outputFile]");
     } else {
         $file = *STDOUT;
     }
