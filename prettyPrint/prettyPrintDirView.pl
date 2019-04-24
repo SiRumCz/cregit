@@ -42,7 +42,7 @@ my $templateParams = {
     die_on_bad_params => 0,
 };
 
-sub pre_setup {
+sub run_process {
     $printDirPath = shift @ARGV; # root/SUBDIR1/SUBDIR2
     $repoDir = shift @ARGV; # original repository
     $sourceDB = shift @ARGV; # token.db
@@ -56,9 +56,6 @@ sub pre_setup {
     Usage("Output Directory not found [$outputDir], maybe try to run file view first\n", 0) unless -e $outputDir;
 
     PrettyPrintDirView::setup_dbi($sourceDB, $authorsDB, $blametokensDB, "");
-    print "Updating per file activity table and date group table.." if $dbUpdate;
-    PrettyPrintDirView::per_file_activity_dbi() if $dbUpdate; # update per file activity table
-    print ".Done!\n" if $dbUpdate;
 
     # filter for c and c++ programming language
     if ($filter_lang eq "c") {
@@ -69,7 +66,20 @@ sub pre_setup {
         $findRegex = "^.*\\.\\(h\\(pp\\)\\?\\|cpp\\)\$";
     }
 
-    return 0;
+    # update activity database
+    if ($dbUpdate) {
+        print "Updating per file activity table and date group table..";
+        PrettyPrintDirView::per_file_activity_dbi();
+        print ".Done!\n";
+    }
+    # options to print single directory or print directories recursively
+    if ($printRecursive) {
+        print_recursive_dirs();
+    } elsif ($printSingle) {
+        print_single_dir();
+    }
+
+    return print_stats();
 }
 
 sub print_single_dir {
@@ -314,7 +324,8 @@ sub content_object {
 sub print_stats {
     print "Processed: [$index] directories\n";
     my $t = Time::Seconds->new(time-$^T);
-    print "Process took [".$t->pretty."] to finish.\n";
+    print "Process time: [".$t->pretty."]\n";
+
     return 0;
 }
 
@@ -326,30 +337,27 @@ sub Usage {
 }
 
 GetOptions(
-    "help"              => \$help,
-    "man"               => \$man,
-    "verbose"           => \$verbose,
-    "update"            => \$dbUpdate,
-    "template=s"        => \$templateFile,
-    "output=s"          => \$outputFile,
-    "filter=s"          => \$filter,
-    "filter-lang=s"     => \$filter_lang,
-    "overwrite"         => \$overwrite,
-    "webroot=s"         => \$webRoot,
-    "webroot-relative"  => \$webRootRelative,
-    "print-single"    => \$printSingle,
-    "print-recursive" => \$printRecursive,
-    "table-bottom" => \$table_bottom
+    "help"             => \$help,
+    "man"              => \$man,
+    "verbose"          => \$verbose,
+    "dbupdate"         => \$dbUpdate,
+    "template=s"       => \$templateFile,
+    "output=s"         => \$outputFile,
+    "filter=s"         => \$filter,
+    "filter-lang=s"    => \$filter_lang,
+    "overwrite"        => \$overwrite,
+    "webroot=s"        => \$webRoot,
+    "webroot-relative" => \$webRootRelative,
+    "print-single"     => \$printSingle,
+    "print-recursive"  => \$printRecursive,
+    "table-bottom"     => \$table_bottom
 ) or die("Error in command line arguments\n");
 
 exit pod2usage(-verbose=>1) if ($help);
 exit pod2usage(-verbose=>2) if ($man);
 exit pod2usage(-verbose=>1, -exit=>1) if (!defined(@ARGV[1]));
 exit pod2usage(-verbose=>1, -exit=>1) if (not -f @ARGV[1] and not -d @ARGV[1]);
-pre_setup;
-print_recursive_dirs if ($printRecursive);
-print_single_dir if (!$printRecursive);
-print_stats;
+exit run_process();
 
 
 __END__
@@ -361,19 +369,22 @@ prettyPrintDirView2.pl: create the "pretty" output of directories in a git repos
 
 =head1 SYNOPSIS
 
+  prettyPrintDirView2.pl [options] --dbupdate <path> <repoDir> <cregitRepoDB> <authorsDB> <blametokensDB> <outputDir>
+
   prettyPrintDirView2.pl [options] [--print-single] <path> <repoDir> <cregitRepoDB> <authorsDB> <blametokensDB> <outputDir>
 
-  prettyPrintDirView2.pl [options] --print-recursive <path> <reepoDir> <cregitRepoDB> <authorsDB> <blametokensDB> <outputDir>
+  prettyPrintDirView2.pl [options] [--print-recursive] <path> <reepoDir> <cregitRepoDB> <authorsDB> <blametokensDB> <outputDir>
 
      Options:
         --help             Brief help message
         --man              Full documentation
         --verbose          Enable verbose output
-        --update           Update database activity for each file
+        --dbupdate         Update database activity for each file
         --template         The template file used to generate static html pages
                            Defaults to templates/page.tmpl
-        --print-single     Create HTML view for single directory, default is single
+        --print-single     Create HTML view for single directory
         --print-recursive  Create HTML views recursively starts from current directory
+        --table-bottom     Options to put contributor table at the bottom of the page, default is top
 
      Options: (single)
         --output           The output file. Defaults to STDOUT.

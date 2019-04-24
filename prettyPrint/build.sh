@@ -1,9 +1,9 @@
 #!/bin/bash
 
 LOCAL_PREVIEW=yes
-DATABASE_UPDATE=yes # update activity database
-PRINT_RECURSIVE=yes # print single directory or all directories
-TABLE_POS_BOTTOM=no # where to put table, top or bottom, default is top
+DATABASE_UPDATE=no # yes: update activity database, no: will directly use database
+PRINT_OPTION=single # options: recursively|single|no
+TABLE_POS_BOTTOM=no # default: place contributor table on top of page
 
 OUTPUT_DIR="/home/zkchen/public_html"
 HOST_URL="http://o.cs.uvic.ca:20810/~zkchen"
@@ -41,12 +41,12 @@ else
 fi
 
 if [ "$DATABASE_UPDATE" = "yes" ]; then
-	DIRVIEWFLAGS+=" --update"
+	DIRVIEWFLAGS+=" --dbupdate"
 fi
 
-if [ "$PRINT_RECURSIVE" = "yes" ]; then
+if [ "$PRINT_OPTION" = "recursively" ]; then
     DIRVIEWFLAGS+=" --print-recursive"
-else
+elif [ "$PRINT_OPTION" = "single" ]; then
     DIRVIEWFLAGS+=" --print-single"
 fi
 
