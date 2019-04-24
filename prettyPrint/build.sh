@@ -1,7 +1,7 @@
 #!/bin/bash
 
 LOCAL_PREVIEW=yes
-DATABASE_UPDATE=no
+DATABASE_UPDATE=yes
 PRINT_RECURSIVE=yes
 
 OUTPUT_DIR="/home/zkchen/public_html"

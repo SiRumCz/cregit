@@ -23,8 +23,8 @@ h1, pre
 {
 	position: relative;
 	left: 0;
-    top: 0;
-    width: 100%;	
+	top: 0;
+	width: 100%;
 	height: 5em;
 	overflow: hidden;
 	display: flex;
@@ -59,10 +59,10 @@ h1, pre
 	height: 8px;
 	border-radius: 2px;
 	background-image: linear-gradient(to right, var(--age-old), var(--age-mid), var(--age-new));
-	
+
 	-moz-transition:opacity 0.2s ease-in;
-    -o-transition:opacity 0.2s ease-in;
-    -webkit-transition:opacity 0.2s ease-in;
+	-o-transition:opacity 0.2s ease-in;
+	-webkit-transition:opacity 0.2s ease-in;
 }
 
 #title-text
@@ -128,7 +128,7 @@ h1, pre
 
 .commit-info
 {
-        font-size: 80%;
+	font-size: 80%;
 
 	padding-top: 2px;
 	background-color: var(--highlight4);
@@ -148,7 +148,7 @@ h1, pre
 	margin-bottom: 0px;
 	white-space:normal;
 	word-wrap: break-word;
-	
+
 	background-color: var(--highlight3);
 	flex: 100;
 }
@@ -195,7 +195,7 @@ h1, pre
 	margin-bottom: 0px;
 	text-align: right;
 	min-width: 6em;
-	
+
 	user-select: none;
 	-moz-user-select: none;
 	-webkit-user-select: none;
@@ -223,7 +223,7 @@ h1, pre
 	width: 80%;
 	padding: 5px 5px;
 	margin-left: auto;
-    margin-right: auto;
+	margin-right: auto;
 }
 
 #select-stats
@@ -236,7 +236,7 @@ h1, pre
 	width: 100%;
 	border: 1px solid #ddd;
 	border-radius: 5px;
-/*	table-layout: fixed;*/
+	/*	table-layout: fixed;*/
 }
 
 .stats-table > caption
@@ -275,7 +275,7 @@ h1, pre
 	padding-left: 8px;
 	text-align: right;
 	font-family: monospace;
-	
+
 	overflow: hidden;
 }
 
@@ -284,7 +284,7 @@ h1, pre
 	text-align: right;
 	padding: 2px 0px;
 	padding-left: 8px;
-    font-size: 80%;
+	font-size: 80%;
 	font-family: monospace;
 	overflow: hidden;
 	text-overflow: ellipsis;
@@ -348,9 +348,9 @@ h1, pre
 }
 
 /* content list margin space */
-ul li 
+ul li
 {
-    margin-top: 6px;
+	margin-top: 6px;
 }
 
 ul {
@@ -359,16 +359,16 @@ ul {
 
 /* content stats graph box */
 .content-stats-graph {
-    float: left;
+	float: left;
 	border: 1px solid var(--highlight4);
 	background-color: var(--highlight4);
 	height: 17px;
-    border-radius: 3px;
-    cursor: pointer;
-    overflow: hidden;
-    user-select: none;
-    white-space: nowrap;
-    display: flex;
+	border-radius: 3px;
+	cursor: pointer;
+	overflow: hidden;
+	user-select: none;
+	white-space: nowrap;
+	display: flex;
 	padding: 0;
 	transition: all 0.2s ease-in-out;
 	-webkit-transition: all 0.2s ease-in-out;
@@ -403,7 +403,7 @@ ul {
 }
 
 button {
-    -webkit-appearance: button;
+	-webkit-appearance: button;
 }
 
 .constent-stats-table-wrapper {
@@ -434,9 +434,9 @@ button {
 .content-name {
 	max-width: 100%;
 	color: blue;
-    display: inline-block;
-    white-space: nowrap;
-    text-overflow: ellipsis;
+	display: inline-block;
+	white-space: nowrap;
+	text-overflow: ellipsis;
 	overflow: hidden;
 	text-decoration: none;
 }
@@ -450,30 +450,31 @@ button {
 	table-layout: fixed;
 }
 
+/* Lines and Tokens */
 .content-list > thead > tr > th {
 	width: 10%;
 	text-align: right;
 }
 
+/* Name */
 .content-list > thead > tr > th:first-child {
-	width: 17%;
+	width: 15%;
 	text-align: left;
 }
 
-.content-list > thead > tr > th:nth-child(2) {
-	width: 13%;
-}
-
+/* Files */
 .content-list > thead > tr > th:nth-child(3) {
-	width: 6%;
+	width: 7%;
 }
 
+/* Authors */
 .content-list > thead > tr > th:nth-child(4) {
-	width: 9%;
+	width: 8%;
 }
 
+/* Color Graph */
 .content-list > thead > tr > th:last-child {
-	width: 55%;
+	width: 50%;
 }
 
 .content-list > tbody > tr >td {
@@ -482,24 +483,20 @@ button {
 }
 
 .content-list > tbody > tr > td:first-child {
-	width: 17%;
+	width: 15%;
 	text-align: left;
 }
 
-.content-list > tbody > tr > td:nth-child(2) {
-	width: 13%;
-}
-
 .content-list > tbody > tr > td:nth-child(3) {
-	width: 6%;
+	width: 7%;
 }
 
 .content-list > tbody > tr > td:nth-child(4) {
-	width: 9%;
+	width: 8%;
 }
 
 .content-list > tbody > tr > td:last-child {
-	width: 55%;
+	width: 50%;
 }
 
 /* style for toggle button */
@@ -534,7 +531,7 @@ button {
 	padding: 1px 4px;
 	font: 15px;
 	display: inline-block;
-    vertical-align: middle;
+	vertical-align: middle;
 }
 
 .expand-stats-table {
