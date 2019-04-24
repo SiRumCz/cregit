@@ -374,6 +374,7 @@ prettyPrintDirView2.pl: create the "pretty" output of directories in a git repos
                            Defaults to templates/page.tmpl
         --print-single     Create HTML view for single directory, default is single
         --print-recursive  Create HTML views recursively starts from current directory
+        --table-bottom     Options to put contributor table at the bottom of the page, default is top
 
      Options: (single)
         --output           The output file. Defaults to STDOUT.
