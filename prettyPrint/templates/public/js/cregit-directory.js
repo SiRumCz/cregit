@@ -33,7 +33,6 @@ $(document).ready(function() {
 	var $graphTableData = $(".graph-table-data");
 	var $authorHighlighting = $(".author-highlighting");
 	var $ageHighlighting = $(".age-highlighting");
-	var $genderHighlighting = $(".gender-highlighting");
 	var $expandableTables = $("table.expandable");
 	var $statsTableExpandableButton = $("button.expand-collapse-table-btn");
 	var $contentListHeader = $("#content-list-header");
@@ -82,10 +81,7 @@ $(document).ready(function() {
 			var date = new Date(timestamp * 1000);
 			var dateOkay = date >= dateFrom && date <= dateTo;
 			var authorOkay = group.find(function(authorToken) {
-				if (highlightMode === "gender")
-					return authorToken.author_gender === authorGender;
-				else
-					return authorToken.author_id === authorId;
+				return authorToken.author_id === authorId;
 			});
 			return dateOkay && (undefined != authorOkay);
 		}
@@ -107,38 +103,6 @@ $(document).ready(function() {
 			return (totalTokens === 0) ? 0 : tokenCount/totalTokens;
 		}
 
-		function getTotalTokensInPeriod() {
-			var matchedGroup = spanGroupData.filter(function(dateGroup) {
-				var timestamp = dateGroup.timestamp;
-				var date = new Date(timestamp * 1000);
-
-				return date >= dateFrom && date <= dateTo;
-			});
-
-			var tokens = 0;
-			matchedGroup.forEach(function(dateGroup) {
-				dateGroup.group.forEach(function(author) {
-					tokens += author.token_count;
-				});
-			});
-
-			return tokens;
-		}
-
-		function getGenderSpanTokenCount(jquery) {
-			var authorGender = jquery.data("gender");
-
-			var tokenCount = 0;
-			var matchedGroup = spanGroupData.filter(groupMatch);
-			matchedGroup.forEach(function (dateGroup) {
-				dateGroup.group.forEach(function(author) {
-					if (author.author_gender === authorGender) { tokenCount += author.token_count; }
-				});
-			});
-
-			return tokenCount;
-		}
-
 		if (highlightMode == "age") {
 			var spanGroup = $(this).children(".age-highlighting");
 			spanGroup.each(function () {
@@ -152,27 +116,6 @@ $(document).ready(function() {
 				colorSpan.removeClass("hideen");
 				if (!allOkay) {
 					colorSpan.addClass("hidden");
-				}
-			});
-		} else if (highlightMode == "gender") {
-			var dataScript = $(this).children("#data-script");
-			if (dateChanged) { eval(dataScript.html()); }
-
-			var authorGender;
-			var tokenCount;
-			var totalTokens = getTotalTokensInPeriod();
-
-			var spanGroup = $(this).children(".gender-highlighting");
-			spanGroup.each(function() {
-				var colorSpan = $(this);
-				authorGender = colorSpan.data("gender");
-				tokenCount = getGenderSpanTokenCount(colorSpan);
-
-				if (dateChanged) {
-					var newLenPercentage = (totalTokens === 0) ? 0 : 100*tokenCount/totalTokens;
-
-					colorSpan.css("width", newLenPercentage+"%");
-					colorSpan.prop("title", authorGender+" : "+tokenCount+" token(s) and "+newLenPercentage.toFixed(2)+"% of token contributions");
 				}
 			});
 		} else if (highlightMode == "author" || undefined != selectedAuthorId) {
@@ -249,9 +192,6 @@ $(document).ready(function() {
 			$authorHighlighting.each(function() {
 				$(this).addClass("hidden");
 			});
-			$genderHighlighting.each(function() {
-				$(this).addClass("hidden");
-			});
 
 			if(lastMode != "age") {
 				dateChanged = true;
@@ -264,26 +204,8 @@ $(document).ready(function() {
 			$ageHighlighting.each(function() {
 				$(this).addClass("hidden");
 			});
-			$genderHighlighting.each(function() {
-				$(this).addClass("hidden");
-			});
 
 			if (lastMode != "author") {
-				dateChanged = true;
-			}
-		}
-		else if (highlightMode == "gender") {
-			$genderHighlighting.each(function() {
-				$(this).removeClass("hidden");
-			});
-			$ageHighlighting.each(function() {
-				$(this).addClass("hidden");
-			});
-			$authorHighlighting.each(function() {
-				$(this).addClass("hidden");
-			});
-
-			if (lastMode != "gender") {
 				dateChanged = true;
 			}
 		}
@@ -292,9 +214,6 @@ $(document).ready(function() {
 				$(this).removeClass("hidden");
 			});
 			$ageHighlighting.each(function() {
-				$(this).addClass("hidden");
-			});
-			$genderHighlighting.each(function() {
 				$(this).addClass("hidden");
 			});
 

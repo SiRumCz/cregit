@@ -2,7 +2,7 @@
 
 LOCAL_PREVIEW=yes
 DATABASE_UPDATE=no # yes: update activity database, no: will directly use database
-PRINT_OPTION=single # options: recursively|single|no
+PRINT_OPTION=recursively # options: recursively|single|no
 TABLE_POS_BOTTOM=no # default: place contributor table on top of page
 
 OUTPUT_DIR="/home/zkchen/public_html"
@@ -26,7 +26,7 @@ PERSONS_DB="${HOME_REPO}/linux-persons-gender.db"
 TOKEN_DB="${HOME_REPO}/token.db"
 BLAMETOKENS_DB="${HOME_REPO}/blame_4_17.db"
 
-DIRVIEWPATH="root" # starting directory for generating directory view
+DIRVIEWPATH="root/kernel" # starting directory for generating directory view
 
 OPTIONS="--filter-lang=c --verbose --overwrite"
 DIRVIEWFLAGS="${OPTIONS}"
