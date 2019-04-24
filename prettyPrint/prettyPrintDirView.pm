@@ -247,6 +247,12 @@ sub setup_dbi {
     $dbh->do("attach database '$authorsDB' as authorsdb;");
     $dbh->do("attach database '$sourceDB' as sourcedb;");
     $dbh->do("attach database '$blametokensDB' as blametokensdb;");
+}
+
+sub per_file_activity_dbi {
+    $dbh->do("DROP TABLE IF EXISTS $perFileActivityTable;");
+    $dbh->do("DROP TABLE IF EXISTS $dategroupTable;");
+    $dbh->do("DROP TABLE IF EXISTS $directoryTmpTable;");
 
     $dbh->do(
         "CREATE TABLE IF NOT EXISTS $perFileActivityTable (
@@ -267,22 +273,10 @@ sub setup_dbi {
         tokens int);"
     );
 
-    $dbh->do(
-        "CREATE TABLE IF NOT EXISTS $directoryTmpTable (
-        personid text,
-        personname text,
-        tokens int,
-        token_proportion text,
-        commits int,
-        commit_proportion text);"
-    );
-}
-
-sub per_file_activity_dbi {
-    $dbh->do("DELETE FROM $perFileActivityTable;");
-    $dbh->do("DELETE FROM $dategroupTable;");
     $dbh->do("DROP INDEX IF EXISTS f_act_index;");
     $dbh->do("DROP INDEX IF EXISTS f_dg_index;");
+    $dbh->do("DELETE FROM $perFileActivityTable;");
+    $dbh->do("DELETE FROM $dategroupTable;");
     # perfileactivity table : filename|personid|personname|originalcid|tokens in this commit|autdate
     $dbh->do(
         "WITH t1 AS (SELECT filename, cid, COUNT(cid) AS tokenspercid FROM blametoken
@@ -292,24 +286,31 @@ sub per_file_activity_dbi {
         ON (t1.cid=commitmap.cid) LEFT JOIN emails ON (autname=emailname AND autemail
         =emailaddr) LEFT JOIN persons USING (personid) ORDER BY filename, tokens DESC;"
     );
+    # perfiledategroup table : filename|dategroup|personid|personname|tokens
     $dbh->do(
         "WITH t1 AS (SELECT *, SUBSTR(autdate, 1, 7)||'-01 00:00:00' AS dategroup FROM
         $perFileActivityTable) INSERT INTO $dategroupTable SELECT filename, t1.dategroup
         AS dategroup, personid, personname, SUM(tokens) AS tokens FROM t1 GROUP BY filename,
         t1.dategroup, personid ORDER BY filename, dategroup;"
     );
-    $dbh->do(
-        "CREATE INDEX f_act_index ON $perFileActivityTable (filename);"
-    );
-    $dbh->do(
-        "CREATE INDEX f_dg_index ON $dategroupTable (filename);"
-    );
+    $dbh->do("CREATE INDEX f_act_index ON $perFileActivityTable (filename);");
+    $dbh->do("CREATE INDEX f_dg_index ON $dategroupTable (filename);");
 }
 
 sub create_directory_table_dbi {
     my $dirPath = shift @_;
     my $bindingVar1 = "\'".$dirPath."/\'";
     my $bindingVar2 = "\'".$dirPath."/{\'";
+
+    $dbh->do(
+        "CREATE TABLE IF NOT EXISTS $directoryTmpTable (
+        personid text,
+        personname text,
+        tokens int,
+        token_proportion text,
+        commits int,
+        commit_proportion text);"
+    );
 
     $dbh->do("DELETE FROM $directoryTmpTable;");
     $dbh->do(
@@ -321,6 +322,7 @@ sub create_directory_table_dbi {
         / NULLIF(CAST((SELECT commits FROM stats) AS float), 0), 0) AS commit_proportion FROM
         $perFileActivityTable WHERE filename between $bindingVar1 AND $bindingVar2 GROUP BY personid ORDER BY tokens DESC;"
     ); # personid|personname|tokens|token_proportion|commits|commit_proportion
+    $dbh->do("CREATE INDEX IF NOT EXISTS f_dirtmp_index ON $directoryTmpTable (personid);");
 
     return prepare_dbi();
 }

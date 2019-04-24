@@ -450,22 +450,31 @@ button {
 	table-layout: fixed;
 }
 
+/* Lines and Tokens */
 .content-list > thead > tr > th {
 	width: 10%;
 	text-align: right;
 }
 
+/* Name */
 .content-list > thead > tr > th:first-child {
-	width: 20%;
+	width: 15%;
 	text-align: left;
 }
 
+/* Files */
 .content-list > thead > tr > th:nth-child(3) {
-	width: 5%;
+	width: 7%;
 }
 
+/* Authors */
+.content-list > thead > tr > th:nth-child(4) {
+	width: 8%;
+}
+
+/* Color Graph */
 .content-list > thead > tr > th:last-child {
-	width: 55%;
+	width: 50%;
 }
 
 .content-list > tbody > tr >td {
@@ -474,16 +483,20 @@ button {
 }
 
 .content-list > tbody > tr > td:first-child {
-	width: 20%;
+	width: 15%;
 	text-align: left;
 }
 
 .content-list > tbody > tr > td:nth-child(3) {
-	width: 5%;
+	width: 7%;
+}
+
+.content-list > tbody > tr > td:nth-child(4) {
+	width: 8%;
 }
 
 .content-list > tbody > tr > td:last-child {
-	width: 55%;
+	width: 50%;
 }
 
 /* style for toggle button */

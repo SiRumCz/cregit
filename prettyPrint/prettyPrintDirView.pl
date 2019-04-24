@@ -6,6 +6,7 @@ use Getopt::Long;
 use HTML::Template;
 use Pod::Usage;
 use Storable qw(dclone);
+use Time::Seconds;
 
 use lib dirname(__FILE__);
 use prettyPrintDirView;
@@ -305,8 +306,9 @@ sub content_object {
 }
 
 sub print_stats {
-    print "Processed: [$index]\n";
-    print "Process took ".(time-$^T)." seconds\n";
+    print "Processed: [$index] directories\n";
+    my $t = Time::Seconds->new(time-$^T);
+    print "Process took [".$t->pretty."] to finish.\n";
     return 0;
 }
 

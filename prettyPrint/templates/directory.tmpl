@@ -89,6 +89,7 @@
                 <th>Lines</th>
                 <th>Files</th>
                 <th>Authors</th>
+                <th>Tokens</th>
                 <th>
                 <button id="abs-prop-toggle" class="toggle-btn" title="click to see the absolute scale for each content">change scale</button> &nbsp;
                 Color Graph By Token Proportion</th>
@@ -111,6 +112,9 @@
                   </td>
                   <td>
                     <TMPL_VAR author_counts>
+                  </td>
+                  <td>
+                    <TMPL_VAR tokens>
                   </td>
                   <td class="graph-table-data">
                     <button class="content-stats-graph" style="width: <TMPL_VAR width>;">
@@ -138,7 +142,7 @@
                 <thead>
                   <tr>
                     <th>Author Name</th>
-                    <th>Token</th>
+                    <th>Tokens</th>
                     <th>Token Proportion</th>
                   </tr>
                 </thead>
@@ -151,9 +155,9 @@
                 </TMPL_LOOP>
                 <tfoot>
                     <tr>
-                      <td><b>Total Tokens</b></td>
-                      <td><TMPL_VAR tokens></td>
-                      <td>100%</td>
+                      <td><b>Total</b></td>
+                      <td><b><TMPL_VAR tokens></b></td>
+                      <td></td>
                     </tr>
                   </tfoot>
               </table>
@@ -181,6 +185,7 @@
                 <th>Lines</th>
                 <th>Files</th>
                 <th>Authors</th>
+                <th>Tokens</th>
                 <th>
                 <button id="abs-prop-toggle" class="toggle-btn">change scale</button> &nbsp;
                 Color Graph By Token Proportion</th>
@@ -203,6 +208,9 @@
                   </td>
                   <td>
                     <TMPL_VAR author_counts>
+                  </td>
+                  <td>
+                    <TMPL_VAR tokens>
                   </td>
                   <td class="graph-table-data">
                     <button class="content-stats-graph file-list" style="width: <TMPL_VAR width>;" data-content-width="<TMPL_VAR width>" data-file-width="<TMPL_VAR width_in_files>">
@@ -230,7 +238,7 @@
                 <thead>
                   <tr>
                     <th>Author Name</th>
-                    <th>Token</th>
+                    <th>Tokens</th>
                     <th>Token Proportion</th>
                   </tr>
                 </thead>
@@ -243,9 +251,9 @@
                 </TMPL_LOOP>
                 <tfoot>
                     <tr>
-                      <td><b>Total Tokens</b></td>
-                      <td><TMPL_VAR tokens></td>
-                      <td>100%</td>
+                      <td><b>Total</b></td>
+                      <td><b><TMPL_VAR tokens></b></td>
+                      <td></td>
                     </tr>
                   </tfoot>
               </table>
@@ -283,10 +291,10 @@
             </tbody>
             <tfoot>
               <tr>
-                <td>Total</td>
-                <td><TMPL_VAR total_tokens></td>
+                <td><b>Total</b></td>
+                <td><b><TMPL_VAR total_tokens></b></td>
                 <td></td>
-                <td><TMPL_VAR total_commits></td>
+                <td><b><TMPL_VAR total_commits></b></td>
                 <td></td>
               </tr>
             </tfoot>
