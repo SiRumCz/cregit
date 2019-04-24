@@ -50,7 +50,9 @@ else
 fi
 
 set -x
-#perl prettyPrint.pl ${FLAGS} "${ORIGINAL_REPO}" "${BLAME_DIRECTORY}" "${TOKEN_DIRECTORY}" "${TOKEN_DB}" "${PERSONS_DB}" "${OUTPUT_DIR}"
+# file view
+perl prettyPrint.pl ${FLAGS} "${ORIGINAL_REPO}" "${BLAME_DIRECTORY}" "${TOKEN_DIRECTORY}" "${TOKEN_DB}" "${PERSONS_DB}" "${OUTPUT_DIR}"
+# directory view
 perl prettyPrintDirView.pl ${DIRVIEWFLAGS} "${DIRVIEWPATH}" "${ORIGINAL_REPO}" "${TOKEN_DB}" "${PERSONS_DB}" "${BLAMETOKENS_DB}" "${OUTPUT_DIR}"
 cp -r templates/public/. ${OUTPUT_DIR}/public
 
