@@ -75,6 +75,47 @@
     </div>
 
     <div id="main-body" class="flex-columns">
+        <TMPL_UNLESS table_bottom>
+            <div class="stats-view">
+              <table id="overall-stats-table" class="stats-table expandable">
+                <caption>Contributors: <span id="contributor-count"><TMPL_VAR contributors_count></span></caption>
+                  <thead>
+                    <tr>
+                      <th>Author</th>
+                      <th>Gender</th>
+                      <th>Tokens</th>
+                      <th>Token Proportion</th>
+                      <th>Commits</th>
+                      <th>Commit Proportion</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <TMPL_LOOP contributors>
+                      <tr class="contributor-row">
+                        <td><span class="table-author author<TMPL_VAR color_id> author-label" data-authorId="<TMPL_VAR id>"><TMPL_VAR ESCAPE=HTML name></span></td>
+                        <td><div class="table-gender gender-label gender-<TMPL_VAR gender>"><TMPL_VAR gender></div></td>
+                        <td><TMPL_VAR tokens></td>
+                        <td><TMPL_VAR token_percent></td>
+                        <td><TMPL_VAR commits></td>
+                        <td><TMPL_VAR commit_percent></td>
+                      </tr>
+                    </TMPL_LOOP>
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      <td><b>Total</b></td>
+                      <td></td>
+                      <td><b><TMPL_VAR total_tokens></b></td>
+                      <td></td>
+                      <td><b><TMPL_VAR total_commits></b></td>
+                      <td></td>
+                    </tr>
+                  </tfoot>
+              </table>
+            </div>
+            <hr class="flex-ruler">
+        </TMPL_UNLESS>
+
       <div id="content-view" class="stats-view">
         <TMPL_IF has_subdir>
         <h2>
@@ -273,45 +314,47 @@
         </TMPL_IF>
       </div>
 
-      <hr class="flex-ruler">
+      <TMPL_IF table_bottom>
+        <hr class="flex-ruler">
 
-      <div class="stats-view">
-        <table id="overall-stats-table" class="stats-table expandable">
-          <caption>Contributors: <span id="contributor-count"><TMPL_VAR contributors_count></span></caption>
-            <thead>
-              <tr>
-                <th>Author</th>
-                <th>Gender</th>
-                <th>Tokens</th>
-                <th>Token Proportion</th>
-                <th>Commits</th>
-                <th>Commit Proportion</th>
-              </tr>
-            </thead>
-            <tbody>
-              <TMPL_LOOP contributors>
-                <tr class="contributor-row">
-                  <td><span class="table-author author<TMPL_VAR color_id> author-label" data-authorId="<TMPL_VAR id>"><TMPL_VAR ESCAPE=HTML name></span></td>
-                  <td><div class="table-gender gender-label gender-<TMPL_VAR gender>"><TMPL_VAR gender></div></td>
-                  <td><TMPL_VAR tokens></td>
-                  <td><TMPL_VAR token_percent></td>
-                  <td><TMPL_VAR commits></td>
-                  <td><TMPL_VAR commit_percent></td>
+        <div class="stats-view">
+            <table id="overall-stats-table" class="stats-table expandable">
+            <caption>Contributors: <span id="contributor-count"><TMPL_VAR contributors_count></span></caption>
+                <thead>
+                <tr>
+                    <th>Author</th>
+                    <th>Gender</th>
+                    <th>Tokens</th>
+                    <th>Token Proportion</th>
+                    <th>Commits</th>
+                    <th>Commit Proportion</th>
                 </tr>
-              </TMPL_LOOP>
-            </tbody>
-            <tfoot>
-              <tr>
-                <td><b>Total</b></td>
-                <td></td>
-                <td><b><TMPL_VAR total_tokens></b></td>
-                <td></td>
-                <td><b><TMPL_VAR total_commits></b></td>
-                <td></td>
-              </tr>
-            </tfoot>
-        </table>
-      </div>
+                </thead>
+                <tbody>
+                <TMPL_LOOP contributors>
+                    <tr class="contributor-row">
+                    <td><span class="table-author author<TMPL_VAR color_id> author-label" data-authorId="<TMPL_VAR id>"><TMPL_VAR ESCAPE=HTML name></span></td>
+                    <td><div class="table-gender gender-label gender-<TMPL_VAR gender>"><TMPL_VAR gender></div></td>
+                    <td><TMPL_VAR tokens></td>
+                    <td><TMPL_VAR token_percent></td>
+                    <td><TMPL_VAR commits></td>
+                    <td><TMPL_VAR commit_percent></td>
+                    </tr>
+                </TMPL_LOOP>
+                </tbody>
+                <tfoot>
+                <tr>
+                    <td><b>Total</b></td>
+                    <td></td>
+                    <td><b><TMPL_VAR total_tokens></b></td>
+                    <td></td>
+                    <td><b><TMPL_VAR total_commits></b></td>
+                    <td></td>
+                </tr>
+                </tfoot>
+            </table>
+        </div>
+      </TMPL_IF>
 
       <hr class="flex-ruler">
       <div id="footer">

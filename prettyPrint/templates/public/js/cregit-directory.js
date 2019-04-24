@@ -614,15 +614,15 @@ $(document).ready(function() {
 	}
 
 	function UpdateContentListHeaderWidth() {
-		var height = $("#navbar").height();
+		var height = document.getElementById("content-list-header").offsetTop;
 		var width = $(".content-list").last().width();
 
-		if ($mainContent.scrollTop() > height) {	
+		if ($mainContent.scrollTop() > height) {
 			$fixedHeader.css("width", width*100/$mainContent.innerWidth()+"%");
 			$fixedHeader.find("button").text($absPropToggle.text());
-			var text = $absPropToggle.attr("title") ? $absPropToggle.attr("title") : ""; 
+			var text = $absPropToggle.attr("title") ? $absPropToggle.attr("title") : "";
 			$fixedHeader.find("button").prop("title", text);
-			$fixedHeader.show();	
+			$fixedHeader.show();
 		}
 		if ($mainContent.scrollTop() < height || $mainContent.scrollTop() > $content.height()) {
 			$fixedHeader.hide();

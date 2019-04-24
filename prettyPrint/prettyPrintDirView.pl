@@ -27,6 +27,7 @@ my $printSingle = 0;
 my $printRecursive = 0;
 my $dbUpdate = 0;
 my $index = 0;
+my $table_bottom = 0;
 
 my $printDirPath;
 my $sourceDB;
@@ -276,6 +277,7 @@ sub print_directory {
     $template->param(time_max => $directory->{maxtime});
     $template->param(cregit_version => $cregitVersion);
     $template->param(web_root => $webRoot);
+    $template->param(table_bottom => $table_bottom);
 
     my $file = undef;
 
@@ -285,7 +287,7 @@ sub print_directory {
     }
 
     if ($outputFile ne "") {
-        open($file, ">", $outputFile) or return PrettyPrint::Error("cannot write to [$outputFile]");
+        open($file, ">", $outputFile) or return $index-=PrettyPrintDirView::Error("cannot write to [$outputFile]");
     } else {
         $file = *STDOUT;
     }
@@ -336,7 +338,8 @@ GetOptions(
     "webroot=s"         => \$webRoot,
     "webroot-relative"  => \$webRootRelative,
     "print-single"    => \$printSingle,
-    "print-recursive" => \$printRecursive
+    "print-recursive" => \$printRecursive,
+    "table-bottom" => \$table_bottom
 ) or die("Error in command line arguments\n");
 
 exit pod2usage(-verbose=>1) if ($help);

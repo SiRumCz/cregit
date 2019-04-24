@@ -1,8 +1,9 @@
 #!/bin/bash
 
 LOCAL_PREVIEW=yes
-DATABASE_UPDATE=yes
-PRINT_RECURSIVE=yes
+DATABASE_UPDATE=yes # update activity database
+PRINT_RECURSIVE=yes # print single directory or all directories
+TABLE_POS_BOTTOM=no # where to put table, top or bottom, default is top
 
 OUTPUT_DIR="/home/zkchen/public_html"
 HOST_URL="http://o.cs.uvic.ca:20810/~zkchen"
@@ -47,6 +48,10 @@ if [ "$PRINT_RECURSIVE" = "yes" ]; then
     DIRVIEWFLAGS+=" --print-recursive"
 else
     DIRVIEWFLAGS+=" --print-single"
+fi
+
+if [ "$TABLE_POS_BOTTOM" = "yes" ]; then
+    DIRVIEWFLAGS+=" --table-bottom"
 fi
 
 set -x
