@@ -10,6 +10,7 @@ use File::Path;
 # database handle and statement handle
 my $dbh;
 my $dirAuthorsSth;
+my $dirGendersSth;
 my $dirStatsCountSth;
 my $subDirAuthorsSth;
 my $subDirCountsSth;
@@ -26,6 +27,7 @@ my $perFileActivityDB = "activity.db";
 my $perFileActivityTable = "perfileactivity";
 my $dategroupTable = "perfiledategroup";
 my $directoryTmpTable = "tmp";
+my $directoryGenderTmpTable = "gendertmp";
 my $authorLimit = 60; # max number of authors to keep for each directory
 
 # return authors list and stats (author count, commit count, token count)
@@ -306,6 +308,7 @@ sub per_file_activity_dbi {
         dategroup text,
         personid text,
         personname text,
+        persongender text,
         tokens int);"
     );
 
@@ -317,20 +320,22 @@ sub per_file_activity_dbi {
     $dbh->do(
         "WITH t1 AS (SELECT filename, cid, COUNT(cid) AS tokenspercid FROM blametoken
         GROUP BY filename, cid) INSERT INTO $perFileActivityTable SELECT 'root/'||filename,
-        personid, COALESCE(personname, 'Unknown'), COALESCE(gender, 'unknown'), originalcid, tokenspercid AS tokens,
-        autdate FROM t1 LEFT JOIN commits ON (t1.cid=commits.cid) LEFT JOIN commitmap
-        ON (t1.cid=commitmap.cid) LEFT JOIN emails ON (autname=emailname AND autemail
-        =emailaddr) LEFT JOIN persons USING (personid) ORDER BY filename, tokens DESC;"
+        personid, COALESCE(personname, 'Unknown'), COALESCE(gender, 'unknown'), originalcid,
+        tokenspercid AS tokens, autdate FROM t1 LEFT JOIN commits ON (t1.cid=commits.cid)
+        LEFT JOIN commitmap ON (t1.cid=commitmap.cid) LEFT JOIN emails ON (autname=emailname
+        AND autemail = emailaddr) LEFT JOIN persons USING (personid) ORDER BY filename, tokens DESC;"
     );
     # perfiledategroup table : filename|dategroup|personid|personname|tokens
     $dbh->do(
         "WITH t1 AS (SELECT *, SUBSTR(autdate, 1, 7)||'-01 00:00:00' AS dategroup FROM
         $perFileActivityTable) INSERT INTO $dategroupTable SELECT filename, t1.dategroup
-        AS dategroup, personid, personname, SUM(tokens) AS tokens FROM t1 GROUP BY filename,
-        t1.dategroup, personid ORDER BY filename, dategroup;"
+        AS dategroup, personid, personname, persongender, SUM(tokens) AS tokens FROM t1
+        GROUP BY filename, t1.dategroup, personid ORDER BY filename, dategroup;"
     );
     $dbh->do("CREATE INDEX f_act_index ON $perFileActivityTable (filename);");
+    $dbh->do("CREATE INDEX f_act_gender_index ON $perFileActivityTable (persongender);");
     $dbh->do("CREATE INDEX f_dg_index ON $dategroupTable (filename);");
+    $dbh->do("CREATE INDEX f_dg_gender_index ON $dategroupTable (persongender);");
 }
 
 sub create_directory_table_dbi {
@@ -348,6 +353,7 @@ sub create_directory_table_dbi {
         commits int,
         commit_proportion text);"
     );
+
     # $dbh->do("DROP INDEX IF EXISTS f_dirtmp_index;");
     # $dbh->do("DROP INDEX IF EXISTS f_dirgender_index;");
     $dbh->do("DELETE FROM $directoryTmpTable;");
@@ -379,6 +385,12 @@ sub prepare_dbi {
         )*100) AS commit_percent FROM $directoryTmpTable WHERE rowid > $authorLimit) SELECT *, 1 AS od
         FROM t1 UNION ALL SELECT *, 2 AS od FROM t2 WHERE t2.tokens IS NOT NULL ORDER BY od;"
     ); # id|color_id|name|gender|tokens|token_proportion|commits|commit_proportion
+
+    $dirGendersSth = $dbh->prepare(
+        "SELECT persongender, COUNT(DISTINCT personid) AS authors, SUM(tokens) AS tokens, SUM(token_proportion)
+        AS token_proportion, SUM(commits) AS commits, SUM(commit_proportion) AS commit_proportion FROM
+        $directoryTmpTable GROUP BY persongender ORDER BY tokens DESC;"
+    );
 
     $dirStatsCountSth = $dbh->prepare(
         "SELECT COUNT(DISTINCT personid) AS author_counts, COALESCE(SUM(commits), 0) AS commit_counts,

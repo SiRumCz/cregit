@@ -37,6 +37,7 @@ my $repoDir;
 my $outputDir;
 
 my $defaultTemplate = dirname(__FILE__) . "/templates/directory.tmpl";
+my $defaultTemplateGenderView = dirname(__FILE__) . "/templates/directoryByGender.tmpl";
 my $templateParams = {
     loop_context_vars => 1,
     die_on_bad_params => 0,
