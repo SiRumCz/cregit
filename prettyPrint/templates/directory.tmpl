@@ -6,9 +6,9 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta http-equiv="content-type" content="text/html; charset=utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
-  
+
   <title><TMPL_VAR directory_name> &#183; cregit</title>
-  
+
   <!-- Script -->
   <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
   <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
@@ -17,7 +17,7 @@
   <script src="<TMPL_VAR web_root>/public/js/cregit.js"></script>
   <script src="<TMPL_VAR web_root>/public/js/cregit-directory.js"></script>
 
-	
+
   <!-- CSS -->
   <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery-contextmenu/2.7.0/jquery.contextMenu.min.css">
@@ -28,11 +28,11 @@
   <!-- <link rel="stylesheet" href="<TMPL_VAR web_root>/public/css/syntax.css"> -->
   <!-- <link rel="stylesheet" href="<TMPL_VAR web_root>/public/css/lanyon.css"> -->
   <!-- <link rel="stylesheet" href="<TMPL_VAR web_root>/public/css/cregit.css"> -->
-  
+
   <!-- Icons -->
   <link rel="apple-touch-icon-precomposed" sizes="144x144" href="/public/apple-touch-icon-precomposed.png">
   <link rel="shortcut icon" href="/public/favicon.ico">
-  
+
   <!-- RSS -->
   <link rel="alternate" type="application/rss+xml" title="RSS" href="/atom.xml">
 </head>
@@ -58,14 +58,14 @@
             <option id="<TMPL_VAR id>"><TMPL_VAR ESCAPE=HTML name></option>
         </TMPL_LOOP>
       </select>
-    </div>	
+    </div>
     <div id="navbar-date-range" class="flex-columns flex-vcenter">
       <div><input id="date-from" type="date"><input id="date-to" type="date"></div>
       <div id="date-slider-range"></div>
       <div id="date-gradient" class="invisible"></div>
     </div>
 	</div>
-	
+
 	<div id="main-content">
     <div id="minimap" class="minimap layout-minimap">
       <div id="minimap-view-shade" class="minimap-view-shade"></div>
@@ -81,6 +81,7 @@
                   <thead>
                     <tr>
                       <th>Author</th>
+                      <th>Files Modified</th>
                       <th>Tokens</th>
                       <th>Token Proportion</th>
                       <th>Commits</th>
@@ -91,6 +92,7 @@
                     <TMPL_LOOP contributors>
                       <tr class="contributor-row">
                         <td><span class="table-author author<TMPL_VAR color_id> author-label" data-authorId="<TMPL_VAR id>"><TMPL_VAR ESCAPE=HTML name></span></td>
+                        <td><TMPL_VAR files></td>
                         <td><TMPL_VAR tokens></td>
                         <td><TMPL_VAR token_percent></td>
                         <td><TMPL_VAR commits></td>
@@ -101,6 +103,7 @@
                   <tfoot>
                     <tr>
                       <td><b>Total</b></td>
+                      <td></td>
                       <td><b><TMPL_VAR total_tokens></b></td>
                       <td></td>
                       <td><b><TMPL_VAR total_commits></b></td>
@@ -202,7 +205,7 @@
               </div>
             </div>
           </TMPL_LOOP>
-          </span>    
+          </span>
         </ul>
         </TMPL_IF>
 
@@ -311,6 +314,7 @@
                 <thead>
                 <tr>
                     <th>Author</th>
+                    <th>Files Modified</th>
                     <th>Tokens</th>
                     <th>Token Proportion</th>
                     <th>Commits</th>
@@ -321,6 +325,7 @@
                 <TMPL_LOOP contributors>
                     <tr class="contributor-row">
                     <td><span class="table-author author<TMPL_VAR color_id> author-label" data-authorId="<TMPL_VAR id>"><TMPL_VAR ESCAPE=HTML name></span></td>
+                    <td><TMPL_VAR files></td>
                     <td><TMPL_VAR tokens></td>
                     <td><TMPL_VAR token_percent></td>
                     <td><TMPL_VAR commits></td>
@@ -331,6 +336,7 @@
                 <tfoot>
                 <tr>
                     <td><b>Total</b></td>
+                    <td></td>
                     <td><b><TMPL_VAR total_tokens></b></td>
                     <td></td>
                     <td><b><TMPL_VAR total_commits></b></td>
@@ -346,7 +352,7 @@
         <div class="credits">Created with Cregit <a href="http://cregit.turingmachine.org">http://cregit.turingmachine.org</a></div>
         <div>Version <TMPL_VAR cregit_version></div>
         </div>
-      
+
     </div>
   </div>
 

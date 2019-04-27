@@ -81,6 +81,7 @@
                   <thead>
                     <tr>
                       <th>Author</th>
+                      <th>Files Modified</th>
                       <th>Tokens</th>
                       <th>Token Proportion</th>
                       <th>Commits</th>
@@ -91,6 +92,7 @@
                     <TMPL_LOOP contributors>
                       <tr class="contributor-row">
                         <td><span class="table-author author<TMPL_VAR color_id> author-label" data-authorId="<TMPL_VAR id>"><TMPL_VAR ESCAPE=HTML name></span></td>
+                        <td><TMPL_VAR files></td>
                         <td><TMPL_VAR tokens></td>
                         <td><TMPL_VAR token_percent></td>
                         <td><TMPL_VAR commits></td>
@@ -101,6 +103,7 @@
                   <tfoot>
                     <tr>
                       <td><b>Total</b></td>
+                      <td></td>
                       <td><b><TMPL_VAR total_tokens></b></td>
                       <td></td>
                       <td><b><TMPL_VAR total_commits></b></td>
@@ -311,6 +314,7 @@
                 <thead>
                 <tr>
                     <th>Author</th>
+                    <th>Files Modified</th>
                     <th>Tokens</th>
                     <th>Token Proportion</th>
                     <th>Commits</th>
@@ -321,6 +325,7 @@
                 <TMPL_LOOP contributors>
                     <tr class="contributor-row">
                     <td><span class="table-author author<TMPL_VAR color_id> author-label" data-authorId="<TMPL_VAR id>"><TMPL_VAR ESCAPE=HTML name></span></td>
+                    <td><TMPL_VAR files></td>
                     <td><TMPL_VAR tokens></td>
                     <td><TMPL_VAR token_percent></td>
                     <td><TMPL_VAR commits></td>
@@ -330,6 +335,7 @@
                 </tbody>
                 <tfoot>
                 <tr>
+                    <td><b>Total</b></td>
                     <td><b>Total</b></td>
                     <td><b><TMPL_VAR total_tokens></b></td>
                     <td></td>

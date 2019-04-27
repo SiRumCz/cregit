@@ -7,7 +7,7 @@ $(document).ready(function() {
 	var spanGroupData = undefined;
 	
 	var guiUpdate = false;
-	var sortColumn = 1;
+	var sortColumn = 2; // contributor table default order
 	var sortReverse = false;
 	var scrollDrag = false;
 	var dateChanged = true;
@@ -333,8 +333,7 @@ $(document).ready(function() {
 	{
 		var cmp = function(a, b) { if (a < b) return -1; if (a > b) return 1; return 0; };
 		var lexical = function (a, b) {
-			var pos = (column === 0 || column === 1)? column : 0;
-			return a.children[pos].firstChild.innerText.localeCompare(b.children[pos].firstChild.innerText);
+			return a.children[0].firstChild.innerText.localeCompare(b.children[0].firstChild.innerText);
 		};
 		var numeric = function (a, b) { return cmp(parseFloat(b.children[column].innerHTML), parseFloat(a.children[column].innerHTML)); };
 		var numericThenLex = function (a, b) { return numeric(a, b) || lexical(a, b); };
@@ -344,7 +343,7 @@ $(document).ready(function() {
 		var rows = $contributor_rows.get();
 		rows.forEach(function(x, i) { $(x).removeClass("hidden"); });
 		
-		if (column === 0 || column === 1)
+		if (column === 0)
 			rows.sort(lexical);
 		else
 			rows.sort(numericThenLex);

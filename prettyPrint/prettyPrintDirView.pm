@@ -348,6 +348,7 @@ sub create_directory_table_dbi {
         personid text,
         personname text,
         persongender text,
+        files text,
         tokens int,
         token_proportion text,
         commits int,
@@ -360,13 +361,13 @@ sub create_directory_table_dbi {
     $dbh->do(
         "WITH stats AS (SELECT SUM(tokens) AS tokens, COUNT(DISTINCT originalcid) AS commits FROM
         $perFileActivityTable WHERE filename between $bindingVar1 AND $bindingVar2) INSERT INTO
-        $directoryTmpTable SELECT personid, personname, persongender, SUM(tokens) AS tokens, COALESCE(
-        CAST(SUM(tokens) AS float) / NULLIF(CAST((SELECT tokens FROM stats) AS float) , 0), 0) AS
-        token_proportion, COUNT(DISTINCT originalcid) AS commits, COALESCE(CAST(COUNT(DISTINCT
-        originalcid) AS float) / NULLIF(CAST((SELECT commits FROM stats) AS float), 0), 0) AS
-        commit_proportion FROM $perFileActivityTable WHERE filename between $bindingVar1 AND
-        $bindingVar2 GROUP BY personid ORDER BY tokens DESC;"
-    ); # personid|personname|persongender|tokens|token_proportion|commits|commit_proportion
+        $directoryTmpTable SELECT personid, personname, persongender, COUNT(DISTINCT filename) AS
+        files, SUM(tokens) AS tokens, COALESCE(CAST(SUM(tokens) AS float) / NULLIF(CAST((SELECT
+        tokens FROM stats) AS float) , 0), 0) AS token_proportion, COUNT(DISTINCT originalcid) AS
+        commits, COALESCE(CAST(COUNT(DISTINCT originalcid) AS float) / NULLIF(CAST((SELECT commits
+        FROM stats) AS float), 0), 0) AS commit_proportion FROM $perFileActivityTable WHERE filename
+        between $bindingVar1 AND $bindingVar2 GROUP BY personid ORDER BY tokens DESC;"
+    ); # personid|personname|persongender|files|tokens|token_proportion|commits|commit_proportion
     $dbh->do("CREATE INDEX IF NOT EXISTS f_dirtmp_index ON $directoryTmpTable (personid);");
     $dbh->do("CREATE INDEX IF NOT EXISTS f_dirgender_index ON $directoryTmpTable (persongender);");
 
@@ -375,16 +376,16 @@ sub create_directory_table_dbi {
 
 sub prepare_dbi {
     $dirAuthorsSth = $dbh->prepare(
-        "WITH t1 AS (SELECT rowid-1 AS id, rowid-1 AS color_id, personname AS name, persongender
-        AS gender, tokens, token_proportion, printf(\"%.2f%%\", token_proportion*100) AS token_percent,
+        "WITH t1 AS (SELECT rowid-1 AS id, rowid-1 AS color_id, personname AS name, files,
+        tokens, token_proportion, printf(\"%.2f%%\", token_proportion*100) AS token_percent,
         commits, commit_proportion, printf(\"%.2f%%\", commit_proportion*100) AS commit_percent FROM
         $directoryTmpTable LIMIT $authorLimit), t2 AS (SELECT $authorLimit AS id, 'Black' AS color_id,
-        'Others' AS name, 'others' AS gender, SUM(tokens) AS tokens, SUM(token_proportion) AS
+        'Others' AS name, SUM(files) AS files, SUM(tokens) AS tokens, SUM(token_proportion) AS
         token_proportion, printf(\"%.2f%%\", SUM(token_proportion)*100) AS token_percent , SUM(commits)
         AS commits, SUM(commit_proportion) AS commit_proportion, printf(\"%.2f%%\", SUM(commit_proportion
         )*100) AS commit_percent FROM $directoryTmpTable WHERE rowid > $authorLimit) SELECT *, 1 AS od
         FROM t1 UNION ALL SELECT *, 2 AS od FROM t2 WHERE t2.tokens IS NOT NULL ORDER BY od;"
-    ); # id|color_id|name|gender|tokens|token_proportion|commits|commit_proportion
+    ); # id|color_id|name|files|tokens|token_proportion|commits|commit_proportion
 
     $dirGendersSth = $dbh->prepare(
         "SELECT persongender, COUNT(DISTINCT personid) AS authors, SUM(tokens) AS tokens, SUM(token_proportion)
