@@ -38,9 +38,11 @@ sub get_directory_stats {
     create_directory_table_dbi($dirPath);
 
     my $result;
+    my $bindingVar1 = $dirPath."/";
+    my $bindingVar2 = $dirPath."/{";
 
     # fetch authors
-    $result = $dirAuthorsSth->execute();
+    $result = $dirAuthorsSth->execute($bindingVar1, $bindingVar2);
     my $authorsMeta = $dirAuthorsSth->fetchall_arrayref({});
 
     if (!defined $result) {
@@ -380,7 +382,10 @@ sub prepare_dbi {
         tokens, token_proportion, printf(\"%.2f%%\", token_proportion*100) AS token_percent,
         commits, commit_proportion, printf(\"%.2f%%\", commit_proportion*100) AS commit_percent FROM
         $directoryTmpTable LIMIT $authorLimit), t2 AS (SELECT $authorLimit AS id, 'Black' AS color_id,
-        'Others' AS name, SUM(files) AS files, SUM(tokens) AS tokens, SUM(token_proportion) AS
+        'Others' AS name, (SELECT COUNT(DISTINCT $perFileActivityTable.filename) AS files FROM $perFileActivityTable LEFT JOIN
+        $directoryTmpTable ON ($perFileActivityTable.personid = $directoryTmpTable.personid) WHERE
+        ($perFileActivityTable.filename BETWEEN ? AND ?) AND $directoryTmpTable.rowid > $authorLimit)
+        AS files, SUM(tokens) AS tokens, SUM(token_proportion) AS
         token_proportion, printf(\"%.2f%%\", SUM(token_proportion)*100) AS token_percent , SUM(commits)
         AS commits, SUM(commit_proportion) AS commit_proportion, printf(\"%.2f%%\", SUM(commit_proportion
         )*100) AS commit_percent FROM $directoryTmpTable WHERE rowid > $authorLimit) SELECT *, 1 AS od
