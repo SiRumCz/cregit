@@ -49,6 +49,12 @@ sub get_directory_stats {
         Warning("Unable to retrieve authors for [$dirPath]");
     }
 
+    $result = $dirGendersSth->execute($bindingVar1, $bindingVar2);
+    my $gendersMeta = $dirGendersSth->fetchall_arrayref({});
+    if (!defined $result) {
+        Warning("Unable to retrieve genders for [$dirPath]");
+    }
+
     $result = $dirStatsCountSth->execute();
     my $statsMeta = $dirStatsCountSth->fetchrow_hashref();
 
@@ -56,7 +62,7 @@ sub get_directory_stats {
         Warning("Unable to retrieve stats for [$dirPath]");
     }
 
-    return ($authorsMeta, $statsMeta);
+    return ($authorsMeta, $gendersMeta, $statsMeta);
 }
 
 sub get_content_stats {
@@ -232,7 +238,7 @@ sub get_breadcrumbs {
         my $name = @dirs[$i];
         my $path = "../" x ($pos-$i);
 
-        push (@breadcrumbs, {name => $name, path => $path});
+        push (@breadcrumbs, {name => $name, path => $path, path_gender => $path."index_gender_view.html"});
     }
 
     return \@breadcrumbs;
@@ -379,23 +385,27 @@ sub create_directory_table_dbi {
 sub prepare_dbi {
     $dirAuthorsSth = $dbh->prepare(
         "WITH t1 AS (SELECT rowid-1 AS id, rowid-1 AS color_id, personname AS name, files,
-        tokens, token_proportion, printf(\"%.2f%%\", token_proportion*100) AS token_percent,
-        commits, commit_proportion, printf(\"%.2f%%\", commit_proportion*100) AS commit_percent FROM
+        tokens, printf(\"%.2f%%\", token_proportion*100) AS token_percent,
+        commits, printf(\"%.2f%%\", commit_proportion*100) AS commit_percent FROM
         $directoryTmpTable LIMIT $authorLimit), t2 AS (SELECT $authorLimit AS id, 'Black' AS color_id,
-        'Others' AS name, (SELECT COUNT(DISTINCT $perFileActivityTable.filename) AS files FROM $perFileActivityTable LEFT JOIN
-        $directoryTmpTable ON ($perFileActivityTable.personid = $directoryTmpTable.personid) WHERE
-        ($perFileActivityTable.filename BETWEEN ? AND ?) AND $directoryTmpTable.rowid > $authorLimit)
-        AS files, SUM(tokens) AS tokens, SUM(token_proportion) AS
-        token_proportion, printf(\"%.2f%%\", SUM(token_proportion)*100) AS token_percent , SUM(commits)
-        AS commits, SUM(commit_proportion) AS commit_proportion, printf(\"%.2f%%\", SUM(commit_proportion
-        )*100) AS commit_percent FROM $directoryTmpTable WHERE rowid > $authorLimit) SELECT *, 1 AS od
-        FROM t1 UNION ALL SELECT *, 2 AS od FROM t2 WHERE t2.tokens IS NOT NULL ORDER BY od;"
+        'Others' AS name, (SELECT COUNT(DISTINCT $perFileActivityTable.filename) AS files FROM
+        $perFileActivityTable LEFT JOIN $directoryTmpTable ON ($perFileActivityTable.personid
+        = $directoryTmpTable.personid) WHERE ($perFileActivityTable.filename BETWEEN ? AND ?)
+        AND $directoryTmpTable.rowid > $authorLimit) AS files, SUM(tokens) AS tokens, printf(\"%.2f%%\",
+        SUM(token_proportion)*100) AS token_percent, SUM(commits) AS commits, printf(\"%.2f%%\",
+        SUM(commit_proportion)*100) AS commit_percent FROM $directoryTmpTable WHERE rowid >
+        $authorLimit) SELECT *, 1 AS od FROM t1 UNION ALL SELECT *, 2 AS od FROM t2 WHERE
+        t2.tokens IS NOT NULL ORDER BY od;"
     ); # id|color_id|name|files|tokens|token_proportion|commits|commit_proportion
 
     $dirGendersSth = $dbh->prepare(
-        "SELECT persongender, COUNT(DISTINCT personid) AS authors, SUM(tokens) AS tokens, SUM(token_proportion)
-        AS token_proportion, SUM(commits) AS commits, SUM(commit_proportion) AS commit_proportion FROM
-        $directoryTmpTable GROUP BY persongender ORDER BY tokens DESC;"
+        "WITH t1 AS (SELECT persongender AS gender, COUNT(DISTINCT filename) AS files FROM
+        $perFileActivityTable WHERE filename BETWEEN ? AND ? GROUP BY persongender)
+        SELECT persongender AS gender, COUNT(DISTINCT personid) AS authors, t1.files AS
+        files, SUM(tokens) AS tokens, printf(\"%.2f%%\", SUM(token_proportion)*100) AS
+        token_percent, SUM(commits) AS commits, printf(\"%.2f%%\", SUM(commit_proportion)*100) AS commit_percent
+        FROM $directoryTmpTable LEFT JOIN t1 ON ($directoryTmpTable.persongender = t1.gender)
+        GROUP BY $directoryTmpTable.persongender ORDER BY tokens DESC;"
     );
 
     $dirStatsCountSth = $dbh->prepare(

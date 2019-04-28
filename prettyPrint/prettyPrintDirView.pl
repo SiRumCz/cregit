@@ -96,10 +96,11 @@ sub print_single_dir {
     $directoryData->{path} = $directoryPath;
 
     print ++$index." : $breadcrumbsPath..";
-    my ($authors, $stats) = PrettyPrintDirView::get_directory_stats($breadcrumbsPath);
+    my ($authors, $genders, $stats) = PrettyPrintDirView::get_directory_stats($breadcrumbsPath);
     my ($minTime, $maxTime) = PrettyPrintDirView::get_minmax_time($breadcrumbsPath);
 
     $directoryData->{authors} = dclone $authors;
+    $directoryData->{genders} = dclone $genders;
     $directoryData->{tokens} = $stats->{tokens};
     $directoryData->{author_counts} = $stats->{author_counts};
     $directoryData->{commit_counts} = $stats->{commit_counts};
@@ -210,6 +211,7 @@ sub print_single_dir {
 
     # print HTML view
     print_directory($directoryData, \@dirList, \@fileList);
+    print_directory_gender_view($directoryData, \@dirList, \@fileList);
     print ".Done\n";
 
     closedir($dh);
@@ -278,6 +280,55 @@ sub print_directory {
     $template->param(contributors_by_name => \@contributorsByName);
     $template->param(contributors_count => $directory->{author_counts});
     $template->param(contributors => $directory->{authors});
+    $template->param(total_tokens => $directory->{tokens});
+    $template->param(total_commits => $directory->{commit_counts});
+    $template->param(has_subdir => scalar @dirList);
+    $template->param(has_file => scalar @fileList);
+    $template->param(directory_list => \@sortedDirList);
+    $template->param(file_list => \@sortedFileList);
+    $template->param(time_min => $directory->{mintime});
+    $template->param(time_max => $directory->{maxtime});
+    $template->param(cregit_version => $cregitVersion);
+    $template->param(web_root => $webRoot);
+    $template->param(table_bottom => $table_bottom);
+
+    my $file = undef;
+
+    if (-f $outputFile and !$overwrite) {
+        print("Output file already exists. Skipping.\n") if $verbose;
+        return 0;
+    }
+
+    if ($outputFile ne "") {
+        open($file, ">", $outputFile) or return $index-=PrettyPrintDirView::Error("cannot write to [$outputFile]");
+    } else {
+        $file = *STDOUT;
+    }
+
+    print $file $template->output();
+    return 0;
+}
+
+sub print_directory_gender_view {
+    my $directory = shift @_;
+    my @dirList = @{shift @_};
+    my @fileList = @{shift @_};
+
+    my $outputFile = File::Spec->catfile($directory->{path}, "index_gender_view.html");
+    my ($fileName, $fileDir) = fileparse($outputFile);
+    my $relativePath = File::Spec->abs2rel($outputDir, $fileDir);
+    $webRoot = $relativePath if $webRootRelative;
+    my @contributorsByName = sort {$a->{name} cmp $b->{name}} @{$directory->{authors}};
+    my @sortedDirList = sort {$a->{name} cmp $b->{name}} @dirList;
+    my @sortedFileList = sort {$a->{name} cmp $b->{name}} @fileList;
+
+    my $template = HTML::Template->new(filename => $defaultTemplateGenderView, %$templateParams);
+
+    $template->param(directory_name => $directory->{name});
+    $template->param(breadcrumb_nav => $directory->{breadcrumbs});
+    $template->param(contributors_by_name => \@contributorsByName);
+    $template->param(contributors_count => $directory->{author_counts});
+    $template->param(contributors => $directory->{genders});
     $template->param(total_tokens => $directory->{tokens});
     $template->param(total_commits => $directory->{commit_counts});
     $template->param(has_subdir => scalar @dirList);

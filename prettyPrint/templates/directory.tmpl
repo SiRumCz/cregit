@@ -14,7 +14,6 @@
   <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-contextmenu/2.7.0/jquery.contextMenu.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-contextmenu/2.7.0/jquery.ui.position.js"></script>
-  <script src="<TMPL_VAR web_root>/public/js/cregit.js"></script>
   <script src="<TMPL_VAR web_root>/public/js/cregit-directory.js"></script>
 
 
@@ -42,9 +41,7 @@
 		<div id="navbar-title-box" class="flex-columns">
       <h1 id="title-text"><TMPL_VAR ESCAPE=HTML directory_name></h1>
       <span id="origin-text">
-        <TMPL_LOOP breadcrumb_nav>
-            <a class="breadcrumb-nav" href="<TMPL_VAR path>"><TMPL_VAR name></a> &nbsp;&nbsp;
-        </TMPL_LOOP>
+        <TMPL_LOOP breadcrumb_nav>&nbsp;/&nbsp;<a class="breadcrumb-nav" href="<TMPL_VAR path>"><TMPL_VAR name></a></TMPL_LOOP>
       </span>
     </div>
     <div id="navbar-option-box" class="flex-columns flex-vcenter">

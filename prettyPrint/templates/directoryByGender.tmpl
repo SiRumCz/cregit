@@ -14,8 +14,7 @@
   <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-contextmenu/2.7.0/jquery.contextMenu.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-contextmenu/2.7.0/jquery.ui.position.js"></script>
-  <script src="<TMPL_VAR web_root>/public/js/cregit.js"></script>
-  <script src="<TMPL_VAR web_root>/public/js/cregit-directory.js"></script>
+  <script src="<TMPL_VAR web_root>/public/js/cregit-directory-gender.js"></script>
 
 
   <!-- CSS -->
@@ -42,22 +41,8 @@
 		<div id="navbar-title-box" class="flex-columns">
       <h1 id="title-text"><TMPL_VAR ESCAPE=HTML directory_name></h1>
       <span id="origin-text">
-        <TMPL_LOOP breadcrumb_nav>
-            <a class="breadcrumb-nav" href="<TMPL_VAR path>"><TMPL_VAR name></a> &nbsp;&nbsp;
-        </TMPL_LOOP>
+        <TMPL_LOOP breadcrumb_nav>&nbsp;/&nbsp;<a class="breadcrumb-nav" href="<TMPL_VAR path>"><TMPL_VAR name></a></TMPL_LOOP>
       </span>
-    </div>
-    <div id="navbar-option-box" class="flex-columns flex-vcenter">
-      <span>Highlighting</span>
-      <select id="select-highlighting" class="select-highlighting">
-        <option value="reset">Reset All</option>
-        <option value="author" selected="selected">By Author</option>
-        <option value="age">By Age</option>
-        <option disabled>──────────</option>
-        <TMPL_LOOP contributors_by_name>
-            <option id="<TMPL_VAR id>"><TMPL_VAR ESCAPE=HTML name></option>
-        </TMPL_LOOP>
-      </select>
     </div>
     <div id="navbar-date-range" class="flex-columns flex-vcenter">
       <div><input id="date-from" type="date"><input id="date-to" type="date"></div>
@@ -80,7 +65,8 @@
                 <caption>Contributors: <span id="contributor-count"><TMPL_VAR contributors_count></span></caption>
                   <thead>
                     <tr>
-                      <th>Author</th>
+                      <th>Gender</th>
+                      <th>Authors</th>
                       <th>Files Modified</th>
                       <th>Tokens</th>
                       <th>Token Proportion</th>
@@ -91,7 +77,8 @@
                   <tbody>
                     <TMPL_LOOP contributors>
                       <tr class="contributor-row">
-                        <td><span class="table-author author<TMPL_VAR color_id> author-label" data-authorId="<TMPL_VAR id>"><TMPL_VAR ESCAPE=HTML name></span></td>
+                        <td><span class="table-author gender-label gender<TMPL_VAR gender>"><TMPL_VAR gender></span></td>
+                        <td><TMPL_VAR authors></td>
                         <td><TMPL_VAR files></td>
                         <td><TMPL_VAR tokens></td>
                         <td><TMPL_VAR token_percent></td>
@@ -103,6 +90,7 @@
                   <tfoot>
                     <tr>
                       <td><b>Total</b></td>
+                      <td></td>
                       <td></td>
                       <td><b><TMPL_VAR total_tokens></b></td>
                       <td></td>
@@ -132,8 +120,7 @@
                 <th>Authors</th>
                 <th>Tokens</th>
                 <th>
-                <button id="abs-prop-toggle" class="toggle-btn" title="click to see the absolute scale for each content">change scale</button> &nbsp;
-                Color Graph By Token Proportion</th>
+                Contribution Ratio Color Graph</th>
               </tr>
             </thead>
           </table>
@@ -160,7 +147,6 @@
                   <td class="graph-table-data">
                     <button class="content-stats-graph" style="width: <TMPL_VAR width>;">
                       <TMPL_LOOP authors><span class="author-highlighting content-span color-graph-author author<TMPL_VAR color_id>" style="width: <TMPL_VAR token_percent>;" title="<TMPL_VAR name> : <TMPL_VAR tokens> token(s)" data-aid="<TMPL_VAR id>" data-total-tokens="<TMPL_VAR tokens>"  data-width-percent="<TMPL_VAR token_percent>"><TMPL_VAR name></span></TMPL_LOOP>
-                      <TMPL_LOOP dateGroups><span class="age-highlighting content-span color-graph-age hidden" style="width: <TMPL_VAR width>" title="<TMPL_VAR timestr> : <TMPL_VAR total_tokens> token(s)" data-timestamp="<TMPL_VAR timestamp>"><TMPL_VAR timestr></span></TMPL_LOOP>
                       <div id="data-script" class="hidden">
                         var spanGroupData = [
                           <TMPL_LOOP dateGroups>
@@ -228,8 +214,7 @@
                 <th>Authors</th>
                 <th>Tokens</th>
                 <th>
-                <button id="abs-prop-toggle" class="toggle-btn">change scale</button> &nbsp;
-                Color Graph By Token Proportion</th>
+                Contribution Ratio Color Graph</th>
               </tr>
             </thead>
           </table>
@@ -256,7 +241,6 @@
                   <td class="graph-table-data">
                     <button class="content-stats-graph file-list" style="width: <TMPL_VAR width>;" data-content-width="<TMPL_VAR width>" data-file-width="<TMPL_VAR width_in_files>">
                       <TMPL_LOOP authors><span class="author-highlighting content-span color-graph-author author<TMPL_VAR color_id>" style="width: <TMPL_VAR token_percent>;" title="<TMPL_VAR name> : <TMPL_VAR tokens> token(s)" data-aid="<TMPL_VAR id>" data-total-tokens="<TMPL_VAR tokens>" data-width-percent="<TMPL_VAR token_percent>"><TMPL_VAR name></span></TMPL_LOOP>
-                      <TMPL_LOOP dateGroups><span class="age-highlighting content-span color-graph-age hidden" style="width: <TMPL_VAR width>" title="<TMPL_VAR timestr> : <TMPL_VAR total_tokens> token(s)" data-timestamp="<TMPL_VAR timestamp>"><TMPL_VAR timestr></span></TMPL_LOOP>
                       <div id="data-script" class="hidden">
                         var spanGroupData = [
                           <TMPL_LOOP dateGroups>
@@ -310,40 +294,43 @@
 
         <div class="stats-view">
             <table id="overall-stats-table" class="stats-table expandable">
-            <caption>Contributors: <span id="contributor-count"><TMPL_VAR contributors_count></span></caption>
+              <caption>Contributors: <span id="contributor-count"><TMPL_VAR contributors_count></span></caption>
                 <thead>
-                <tr>
-                    <th>Author</th>
+                  <tr>
+                    <th>Gender</th>
+                    <th>Authors</th>
                     <th>Files Modified</th>
                     <th>Tokens</th>
                     <th>Token Proportion</th>
                     <th>Commits</th>
                     <th>Commit Proportion</th>
-                </tr>
+                  </tr>
                 </thead>
                 <tbody>
-                <TMPL_LOOP contributors>
+                  <TMPL_LOOP contributors>
                     <tr class="contributor-row">
-                    <td><span class="table-author author<TMPL_VAR color_id> author-label" data-authorId="<TMPL_VAR id>"><TMPL_VAR ESCAPE=HTML name></span></td>
-                    <td><TMPL_VAR files></td>
-                    <td><TMPL_VAR tokens></td>
-                    <td><TMPL_VAR token_percent></td>
-                    <td><TMPL_VAR commits></td>
-                    <td><TMPL_VAR commit_percent></td>
+                      <td><span class="table-author gender-label gender<TMPL_VAR gender>"><TMPL_VAR gender></span></td>
+                      <td><TMPL_VAR authors></td>
+                      <td><TMPL_VAR files></td>
+                      <td><TMPL_VAR tokens></td>
+                      <td><TMPL_VAR token_percent></td>
+                      <td><TMPL_VAR commits></td>
+                      <td><TMPL_VAR commit_percent></td>
                     </tr>
-                </TMPL_LOOP>
+                  </TMPL_LOOP>
                 </tbody>
                 <tfoot>
-                <tr>
+                  <tr>
                     <td><b>Total</b></td>
-                    <td><b>Total</b></td>
+                    <td></td>
+                    <td></td>
                     <td><b><TMPL_VAR total_tokens></b></td>
                     <td></td>
                     <td><b><TMPL_VAR total_commits></b></td>
                     <td></td>
-                </tr>
+                  </tr>
                 </tfoot>
-            </table>
+              </table>
         </div>
       </TMPL_IF>
 
