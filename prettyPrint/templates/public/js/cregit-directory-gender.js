@@ -26,7 +26,6 @@ $(document).ready(function() {
     var $dateSliderRange = $("#date-slider-range");
     var $statsGraphButton = $("button.content-stats-graph");
     var $absPropToggle = $("#abs-prop-toggle");
-    var $hideSubDirButton = $("#hide-subdirectory-btn");
     var $graphTableData = $(".graph-table-data");
     var $expandableTables = $("table.expandable");
     var $statsTableExpandableButton = $("button.expand-collapse-table-btn");

@@ -116,7 +116,7 @@
 .author60 { --author-color: hsl(078, 058%, 049%); }
 .authorBlack { --author-color: hsl(000, 000%, 031%); } /* authors ranked below 60 */
 
-.gendermale { --gender-color: hsl(197, 073%, 050%); } /* male */
-.genderfemale { --gender-color: hsl(349, 098%, 052%); } /* female */
-.genderother { --author-color: hsl(143, 063%, 046%); } /* other */
-.genderunknown { --gender-color: hsl(000, 000%, 031%); } /* unknown */
+.gender-male { --gender-color: hsl(197, 073%, 050%); } /* male */
+.gender-female { --gender-color: hsl(349, 098%, 052%); } /* female */
+.gender-other { --gender-color: hsl(143, 063%, 046%); } /* other */
+.gender-unknown { --gender-color: hsl(000, 000%, 031%); } /* unknown */

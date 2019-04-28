@@ -77,7 +77,7 @@
                   <tbody>
                     <TMPL_LOOP contributors>
                       <tr class="contributor-row">
-                        <td><span class="table-author gender-label gender<TMPL_VAR gender>"><TMPL_VAR gender></span></td>
+                        <td><div class="gender-label gender-<TMPL_VAR gender>"><TMPL_VAR gender></div></td>
                         <td><TMPL_VAR authors></td>
                         <td><TMPL_VAR files></td>
                         <td><TMPL_VAR tokens></td>
@@ -105,11 +105,7 @@
 
       <div id="content-view" class="stats-view">
         <TMPL_IF has_subdir>
-        <h2>
-        <TMPL_IF has_file>
-        <button id="hide-subdirectory-btn" class="toggle-btn" title="hide subdirectories to see relationship between each file">&minus;</button>&nbsp;
-        </TMPL_IF>
-        Subdirectories:</h2>
+        <h2>Subdirectories:</h2>
         <ul>
           <table id="content-list-header" class="content-list">
             <thead>
@@ -145,8 +141,8 @@
                     <TMPL_VAR tokens>
                   </td>
                   <td class="graph-table-data">
-                    <button class="content-stats-graph" style="width: <TMPL_VAR width>;">
-                      <TMPL_LOOP authors><span class="author-highlighting content-span color-graph-author author<TMPL_VAR color_id>" style="width: <TMPL_VAR token_percent>;" title="<TMPL_VAR name> : <TMPL_VAR tokens> token(s)" data-aid="<TMPL_VAR id>" data-total-tokens="<TMPL_VAR tokens>"  data-width-percent="<TMPL_VAR token_percent>"><TMPL_VAR name></span></TMPL_LOOP>
+                    <button class="content-stats-graph" style="width: 100%;">
+                      <TMPL_LOOP genderGroups><span class="gender-by-tokens content-span color-graph-gender gender-<TMPL_VAR gendergroup>" style="width: <TMPL_VAR token_percent>;" title="<TMPL_VAR gendergroup> : <TMPL_VAR tokens> token(s) and <TMPL_VAR token_percent> of token contributions" data-gender="<TMPL_VAR gendergroup>"><TMPL_VAR gendergroup></span></TMPL_LOOP>
                       <div id="data-script" class="hidden">
                         var spanGroupData = [
                           <TMPL_LOOP dateGroups>
@@ -239,8 +235,8 @@
                     <TMPL_VAR tokens>
                   </td>
                   <td class="graph-table-data">
-                    <button class="content-stats-graph file-list" style="width: <TMPL_VAR width>;" data-content-width="<TMPL_VAR width>" data-file-width="<TMPL_VAR width_in_files>">
-                      <TMPL_LOOP authors><span class="author-highlighting content-span color-graph-author author<TMPL_VAR color_id>" style="width: <TMPL_VAR token_percent>;" title="<TMPL_VAR name> : <TMPL_VAR tokens> token(s)" data-aid="<TMPL_VAR id>" data-total-tokens="<TMPL_VAR tokens>" data-width-percent="<TMPL_VAR token_percent>"><TMPL_VAR name></span></TMPL_LOOP>
+                    <button class="content-stats-graph file-list" style="width: 100%;">
+                      <TMPL_LOOP genderGroups><span class="gender-by-tokens content-span color-graph-gender gender-<TMPL_VAR gendergroup>" style="width: <TMPL_VAR token_percent>;" title="<TMPL_VAR gendergroup> : <TMPL_VAR tokens> token(s) and <TMPL_VAR token_percent> of token contributions" data-gender="<TMPL_VAR gendergroup>"><TMPL_VAR gendergroup></span></TMPL_LOOP>
                       <div id="data-script" class="hidden">
                         var spanGroupData = [
                           <TMPL_LOOP dateGroups>
@@ -309,7 +305,7 @@
                 <tbody>
                   <TMPL_LOOP contributors>
                     <tr class="contributor-row">
-                      <td><span class="table-author gender-label gender<TMPL_VAR gender>"><TMPL_VAR gender></span></td>
+                      <td><div class="gender-label gender-<TMPL_VAR gender>"><TMPL_VAR gender></div></td>
                       <td><TMPL_VAR authors></td>
                       <td><TMPL_VAR files></td>
                       <td><TMPL_VAR tokens></td>
