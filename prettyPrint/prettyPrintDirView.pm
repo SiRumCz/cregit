@@ -240,7 +240,7 @@ sub get_breadcrumbs {
         my $name = @dirs[$i];
         my $path = "../" x ($pos-$i);
 
-        push (@breadcrumbs, {name => $name, path => $path, path_gender => $path."index_gender_view.html"});
+        push (@breadcrumbs, {name => $name, path => $path});
     }
 
     return \@breadcrumbs;
