@@ -383,7 +383,10 @@ sub per_file_activity_dbi {
     );
 
     $dbh->do("DROP INDEX IF EXISTS f_act_index;");
+    $dbh->do("DROP INDEX IF EXISTS f_act_gender_index;");
     $dbh->do("DROP INDEX IF EXISTS f_dg_index;");
+    $dbh->do("DROP INDEX IF EXISTS f_dg_gender_index;");
+    $dbh->do("DROP INDEX IF EXISTS f_dg_personid_index;");
     $dbh->do("DELETE FROM $perFileActivityTable;");
     $dbh->do("DELETE FROM $dategroupTable;");
     # perfileactivity table : filename|personid|personname|originalcid|tokens in this commit|autdate
@@ -406,6 +409,7 @@ sub per_file_activity_dbi {
     $dbh->do("CREATE INDEX f_act_gender_index ON $perFileActivityTable (persongender);");
     $dbh->do("CREATE INDEX f_dg_index ON $dategroupTable (filename);");
     $dbh->do("CREATE INDEX f_dg_gender_index ON $dategroupTable (persongender);");
+    $dbh->do("CREATE INDEX f_dg_personid_index ON $dategroupTable (personid);");
 }
 
 sub create_directory_table_dbi {
