@@ -15,11 +15,13 @@ my $dirStatsCountSth;
 my $subDirAuthorsSth;
 my $subDirCountsSth;
 my $subDirDateGroupSth;
+my $subDirDateGroupGenderSth;
 my $subDirGenderGroupByTokensSth;
 my $subDirGenderGroupByAuthorsSth;
 my $fileAuthorsSth;
 my $fileCountsSth;
 my $fileDateGroupSth;
+my $fileDateGroupGenderSth;
 my $fileGenderGroupByTokensSth;
 my $fileGenderGroupByAuthorsSth;
 my $minTimeSth;
@@ -29,7 +31,6 @@ my $perFileActivityDB = "activity.db";
 my $perFileActivityTable = "perfileactivity";
 my $dategroupTable = "perfiledategroup";
 my $directoryTmpTable = "tmp";
-my $directoryGenderTmpTable = "gendertmp";
 my $authorLimit = 60; # max number of authors to keep for each directory
 
 # return authors list and stats (author count, commit count, token count)
@@ -46,23 +47,15 @@ sub get_directory_stats {
     # fetch authors
     $result = $dirAuthorsSth->execute($bindingVar1, $bindingVar2);
     my $authorsMeta = $dirAuthorsSth->fetchall_arrayref({});
-
-    if (!defined $result) {
-        Warning("Unable to retrieve authors for [$dirPath]");
-    }
+    Warning("Unable to retrieve authors for [$dirPath]") if (!defined $result);
 
     $result = $dirGendersSth->execute($bindingVar1, $bindingVar2);
     my $gendersMeta = $dirGendersSth->fetchall_arrayref({});
-    if (!defined $result) {
-        Warning("Unable to retrieve genders for [$dirPath]");
-    }
+    Warning("Unable to retrieve genders for [$dirPath]") if (!defined $result);
 
     $result = $dirStatsCountSth->execute();
     my $statsMeta = $dirStatsCountSth->fetchrow_hashref();
-
-    if (! defined $result) {
-        Warning("Unable to retrieve stats for [$dirPath]");
-    }
+    Warning("Unable to retrieve stats for [$dirPath]") if (! defined $result);
 
     return ($authorsMeta, $gendersMeta, $statsMeta);
 }
@@ -87,10 +80,7 @@ sub get_content_stats {
         $result = $subDirAuthorsSth->execute($bindingVar1, $bindingVar2, $bindingVar1, $bindingVar2);
         $authorsMeta = $subDirAuthorsSth->fetchall_arrayref({});
     }
-
-    if (!defined $result) {
-        Warning("Unable to retrieve authors for [$contentPath]");
-    }
+    Warning("Unable to retrieve authors for [$contentPath]") if (!defined $result);
 
     my $statsMeta;
     if ('f' eq $type) {
@@ -100,10 +90,7 @@ sub get_content_stats {
         $result = $subDirCountsSth->execute($bindingVar1, $bindingVar2);
         $statsMeta = $subDirCountsSth->fetchrow_hashref();
     }
-
-    if (!defined $result) {
-        Warning("Unable to retrieve stats for [$contentPath]");
-    }
+    Warning("Unable to retrieve stats for [$contentPath]") if (!defined $result);
 
     return ($authorsMeta, $statsMeta);
 }
@@ -141,12 +128,11 @@ sub get_content_dategroup {
     my $OthersTokenCount = 0;
     foreach (@{$dategroupMeta}) {
         my @currDategroup = @{$_};
-        @currDategroup = ("1970-01-01 00:00:00", $authorLimit,"others", 0) unless (scalar @currDategroup == 4);
+        @currDategroup = ("1970-01-01 00:00:00", $authorLimit, 0) unless (scalar @currDategroup == 3);
 
         my $dategroup = str2time(@currDategroup[0]);
         my $authorId = @currDategroup[1];
-        my $authorGender = @currDategroup[2];
-        my $tokenCount = @currDategroup[3];
+        my $tokenCount = @currDategroup[2];
 
         if (! defined $lastGroup) {
             push(@dateGroups, {
@@ -165,24 +151,23 @@ sub get_content_dategroup {
 
             if ($OthersTokenCount > 0) {
                 push(@{@dateGroups[$index]->{group}}, {
-                    author_id     => $authorLimit,
-                    author_gender => "others",
-                    token_count   => $OthersTokenCount
+                    author_id   => $authorLimit,
+                    token_count => $OthersTokenCount
                 });
                 $OthersTokenCount = 0;
             }
 
             $index++;
         }
+
         @dateGroups[$index]->{total_tokens} += $tokenCount;
 
         if ($authorId >= $authorLimit) {
             $OthersTokenCount += $tokenCount;
         } else {
             push(@{@dateGroups[$index]->{group}}, {
-                author_id     => $authorId,
-                author_gender => $authorGender,
-                token_count   => $tokenCount
+                author_id   => $authorId,
+                token_count => $tokenCount
             });
         }
 
@@ -191,13 +176,81 @@ sub get_content_dategroup {
 
     if ($OthersTokenCount > 0) {
         push(@{@dateGroups[$index]->{group}}, {
-            author_id     => $authorLimit,
-            author_gender => "others",
-            token_count   => $OthersTokenCount
+            author_id   => $authorLimit,
+            token_count => $OthersTokenCount
         });
     }
 
     return [@dateGroups];
+}
+
+sub get_content_dategroup_gender_view {
+    my $contentPath = shift @_;
+    my $type = shift @_;
+
+    my @dateGroupsByGender = ();
+    my $bindingVar1;
+    my $bindingVar2;
+    my $result;
+    my $dategroupByGenderMeta;
+
+    if ('f' eq $type) {
+        $bindingVar1 = "root/".$contentPath;
+
+        $result = $fileDateGroupGenderSth->execute($bindingVar1);
+        $dategroupByGenderMeta = $fileDateGroupGenderSth->fetchall_arrayref;
+    } elsif ('d' eq $type) {
+        $bindingVar1 = $contentPath."/";
+        $bindingVar2 = $bindingVar1."{";
+
+        $result = $subDirDateGroupGenderSth->execute($bindingVar1, $bindingVar2);
+        $dategroupByGenderMeta = $subDirDateGroupGenderSth->fetchall_arrayref;
+    }
+
+    if (! defined $result) {
+        Warning("Unable to retrieve gender view dategroup for [$contentPath]");
+        return ();
+    }
+
+    my $lastGroup;
+    my $index = 0;
+    foreach (@{$dategroupByGenderMeta}) {
+        my @currDategroup = @{$_};
+        @currDategroup = ("1970-01-01 00:00:00","Unknown", "unknown",0) unless (scalar @currDategroup == 4);
+
+        my $dategroup = str2time(@currDategroup[0]);
+        my $authorId = @currDategroup[1];
+        my $gender = @currDategroup[2];
+        my $tokenCount = @currDategroup[3];
+
+        if (! defined $lastGroup) {
+            push(@dateGroupsByGender, {
+                timestamp    => $dategroup,
+                group        => undef,
+                total_tokens => 0
+            });
+        } elsif ($dategroup != $lastGroup) {
+            push(@dateGroupsByGender, {
+                timestamp    => $dategroup,
+                group        => undef,
+                total_tokens => 0
+            });
+
+            $index++;
+        }
+
+        @dateGroupsByGender[$index]->{total_tokens} += $tokenCount;
+
+        push(@{@dateGroupsByGender[$index]->{group}}, {
+            gender      => $gender,
+            author_id   => $authorId,
+            token_count => $tokenCount
+        });
+
+        $lastGroup = $dategroup;
+    }
+
+    return [@dateGroupsByGender];
 }
 
 sub get_content_gendergroup {
@@ -207,25 +260,32 @@ sub get_content_gendergroup {
     my $bindingVar1;
     my $bindingVar2;
     my $result;
-    my $genderMeta;
+    my $genderByTokensMeta;
+    my $genderByAuthorsMeta;
 
     if ('f' eq $type) {
         $bindingVar1 = "root/".$contentPath;
 
         $result = $fileGenderGroupByTokensSth->execute($bindingVar1, $bindingVar1);
-        $genderMeta = $fileGenderGroupByTokensSth->fetchall_arrayref({});
+        $genderByTokensMeta = $fileGenderGroupByTokensSth->fetchall_arrayref({});
+        Warning("Unable to retrieve gender group by tokens for [$contentPath]") if (!defined $result);
+
+        $result = $fileGenderGroupByAuthorsSth->execute($bindingVar1, $bindingVar1);
+        $genderByAuthorsMeta = $fileGenderGroupByAuthorsSth->fetchall_arrayref({});
+        Warning("Unable to retrieve gender group by authors for [$contentPath]") if (!defined $result);
     } elsif ('d' eq $type) {
         $bindingVar1 = $contentPath."/";
         $bindingVar2 = $bindingVar1."{";
         $result = $subDirGenderGroupByTokensSth->execute($bindingVar1, $bindingVar2, $bindingVar1, $bindingVar2);
-        $genderMeta = $subDirGenderGroupByTokensSth->fetchall_arrayref({});
+        $genderByTokensMeta = $subDirGenderGroupByTokensSth->fetchall_arrayref({});
+        Warning("Unable to retrieve gender group by tokens for [$contentPath]") if (!defined $result);
+
+        $result = $subDirGenderGroupByAuthorsSth->execute($bindingVar1, $bindingVar2, $bindingVar1, $bindingVar2);
+        $genderByAuthorsMeta = $subDirGenderGroupByAuthorsSth->fetchall_arrayref({});
+        Warning("Unable to retrieve gender group by authors for [$contentPath]") if (!defined $result);
     }
 
-    if (!defined $result) {
-        Warning("Unable to retrieve gender group for [$contentPath]");
-    }
-
-    return $genderMeta;
+    return ($genderByTokensMeta, $genderByAuthorsMeta);
 }
 
 # get breadcrumbs for HTML view
@@ -335,7 +395,7 @@ sub per_file_activity_dbi {
         LEFT JOIN commitmap ON (t1.cid=commitmap.cid) LEFT JOIN emails ON (autname=emailname
         AND autemail = emailaddr) LEFT JOIN persons USING (personid) ORDER BY filename, tokens DESC;"
     );
-    # perfiledategroup table : filename|dategroup|personid|personname|tokens
+    # perfiledategroup table : filename|dategroup|personid|personname|persongender|tokens
     $dbh->do(
         "WITH t1 AS (SELECT *, SUBSTR(autdate, 1, 7)||'-01 00:00:00' AS dategroup FROM
         $perFileActivityTable) INSERT INTO $dategroupTable SELECT filename, t1.dategroup
@@ -408,7 +468,7 @@ sub prepare_dbi {
         token_percent, SUM(commits) AS commits, printf(\"%.2f%%\", SUM(commit_proportion)*100) AS commit_percent
         FROM $directoryTmpTable LEFT JOIN t1 ON ($directoryTmpTable.persongender = t1.gender)
         GROUP BY $directoryTmpTable.persongender ORDER BY tokens DESC;"
-    );
+    ); # gender|authors|files|tokens|token_proportion|commits|commit_proportion
 
     $dirStatsCountSth = $dbh->prepare(
         "SELECT COUNT(DISTINCT personid) AS author_counts, COALESCE(SUM(commits), 0) AS commit_counts,
@@ -438,9 +498,14 @@ sub prepare_dbi {
     );
 
     $subDirDateGroupSth = $dbh->prepare(
-        "SELECT t1.dategroup, t2.rowid-1 AS id, t2.persongender, SUM(t1.tokens) AS tokens FROM $dategroupTable AS t1 INNER JOIN
-        $directoryTmpTable AS t2 ON(t1.personid=t2.personid) WHERE filename BETWEEN ? AND ? GROUP BY t1.dategroup,
-        t1.personid ORDER BY t1.dategroup;"
+        "SELECT t1.dategroup, t2.rowid-1 AS id, SUM(t1.tokens) AS tokens FROM $dategroupTable
+        AS t1 INNER JOIN $directoryTmpTable AS t2 ON(t1.personid=t2.personid) WHERE filename BETWEEN ? AND ?
+        GROUP BY t1.dategroup, t1.personid ORDER BY t1.dategroup;"
+    );
+
+    $subDirDateGroupGenderSth = $dbh->prepare(
+        "SELECT dategroup, personid, persongender AS gender, SUM(tokens) AS tokens FROM $dategroupTable WHERE
+        filename BETWEEN ? AND ? GROUP BY dategroup, personid ORDER BY dategroup;"
     );
 
     $subDirGenderGroupByTokensSth = $dbh->prepare(
@@ -449,6 +514,14 @@ sub prepare_dbi {
         $perFileActivityTable WHERE filename BETWEEN ? AND ? GROUP BY persongender) SELECT *, printf(\"%.2f%%\"
         , COALESCE(CAST(t1.tokens AS float) / NULLIF(CAST((SELECT tokens FROM stats) AS float) , 0), 0)*100
         ) AS token_percent FROM t1 ORDER BY t1.gendergroup;"
+    );
+
+    $subDirGenderGroupByAuthorsSth = $dbh->prepare(
+        "WITH stats AS (SELECT COALESCE(COUNT(DISTINCT personid), 0) AS authors FROM $perFileActivityTable
+        WHERE filename BETWEEN ? AND ?), t1 AS (SELECT persongender AS gendergroup, COALESCE(COUNT(DISTINCT
+        personid), 0) AS authors FROM $perFileActivityTable WHERE filename BETWEEN ? AND ? GROUP BY persongender
+        ) SELECT *, printf(\"%.2f%%\", COALESCE(CAST(t1.authors AS float) / NULLIF(CAST((SELECT authors FROM
+        stats) AS float) , 0), 0)*100) AS author_percent FROM t1 ORDER BY t1.gendergroup;"
     );
 
     $fileAuthorsSth = $dbh->prepare(
@@ -474,9 +547,14 @@ sub prepare_dbi {
     );
 
     $fileDateGroupSth = $dbh->prepare(
-        "SELECT t1.dategroup, t2.rowid-1 AS id, t2.persongender, SUM(t1.tokens) AS tokens FROM $dategroupTable AS t1 INNER JOIN
-        $directoryTmpTable AS t2 ON(t1.personid=t2.personid) WHERE filename = ? GROUP BY t1.dategroup, t1.personid
-        ORDER BY t1.dategroup;"
+        "SELECT t1.dategroup, t2.rowid-1 AS id, SUM(t1.tokens) AS tokens FROM $dategroupTable
+        AS t1 INNER JOIN $directoryTmpTable AS t2 ON(t1.personid=t2.personid) WHERE filename = ? GROUP BY
+        t1.dategroup, t1.personid ORDER BY t1.dategroup;"
+    );
+
+    $fileDateGroupGenderSth = $dbh->prepare(
+        "SELECT dategroup, personid, persongender AS gender, SUM(tokens) AS tokens FROM $dategroupTable WHERE
+        filename = ? GROUP BY dategroup, personid ORDER BY dategroup;"
     );
 
     $fileGenderGroupByTokensSth = $dbh->prepare(
@@ -485,6 +563,14 @@ sub prepare_dbi {
         $perFileActivityTable WHERE filename = ? GROUP BY persongender) SELECT *, printf(\"%.2f%%\"
         , COALESCE(CAST(t1.tokens AS float) / NULLIF(CAST((SELECT tokens FROM stats) AS float) , 0), 0)*100
         ) AS token_percent FROM t1 ORDER BY t1.gendergroup;"
+    );
+
+    $fileGenderGroupByAuthorsSth = $dbh->prepare(
+        "WITH stats AS (SELECT COALESCE(COUNT(DISTINCT personid), 0) AS authors FROM $perFileActivityTable
+        WHERE filename = ?), t1 AS (SELECT persongender AS gendergroup, COALESCE(COUNT(DISTINCT
+        personid), 0) AS authors FROM $perFileActivityTable WHERE filename = ? GROUP BY persongender
+        ) SELECT *, printf(\"%.2f%%\", COALESCE(CAST(t1.authors AS float) / NULLIF(CAST((SELECT authors FROM
+        stats) AS float) , 0), 0)*100) AS author_percent FROM t1 ORDER BY t1.gendergroup;"
     );
 
     $minTimeSth = $dbh->prepare(

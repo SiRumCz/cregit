@@ -134,7 +134,8 @@ sub print_single_dir {
 
             my ($contentAuthors, $contentStats) = PrettyPrintDirView::get_content_stats($contentRelativePath, 'd');
             my $dateGroups = PrettyPrintDirView::get_content_dategroup($contentRelativePath, 'd');
-            my $genderGroups = PrettyPrintDirView::get_content_gendergroup($contentRelativePath, 'd');
+            my $dateGroupsByGender = PrettyPrintDirView::get_content_dategroup_gender_view($contentRelativePath, 'd');
+            my ($genderGroupsByTokens, $genderGroupsByAuthors) = PrettyPrintDirView::get_content_gendergroup($contentRelativePath, 'd');
             my ($fileCount, $lineCount) = get_file_and_line_counts($dirSourcePath);
 
             $content = content_object($currContent);
@@ -143,9 +144,11 @@ sub print_single_dir {
             $content->{url} = "./".$currContent;
             $content->{authors} = dclone $contentAuthors;
             $content->{dateGroups} = dclone $dateGroups;
+            $content->{dateGroupsByGender} = dclone $dateGroupsByGender;
             $content->{line_counts} = $lineCount;
             $content->{file_counts} = $fileCount;
-            $content->{genderGroups} = dclone $genderGroups;
+            $content->{genderGroupsByTokens} = dclone $genderGroupsByTokens;
+            $content->{genderGroupsByAuthors} = dclone $genderGroupsByAuthors;
 
             push(@dirList, dclone $content);
         } elsif (-f $contentPath and $contentPath =~ /$filter/) {
@@ -161,7 +164,8 @@ sub print_single_dir {
 
             my ($contentAuthors, $contentStats) = PrettyPrintDirView::get_content_stats($fileName, 'f');
             my $dateGroups = PrettyPrintDirView::get_content_dategroup($fileName, 'f');
-            my $genderGroups = PrettyPrintDirView::get_content_gendergroup($fileName, 'f');
+            my $dateGroupsByGender = PrettyPrintDirView::get_content_dategroup_gender_view($fileName, 'f');
+            my ($genderGroupsByTokens, $genderGroupsByAuthors) = PrettyPrintDirView::get_content_gendergroup($fileName, 'f');
 
             $content = content_object(basename($fileName));
             my $fileLines = `wc -l < $sourceFile;`+0;
@@ -172,7 +176,9 @@ sub print_single_dir {
             $content->{url} = "./".basename($contentPath);
             $content->{authors} = dclone $contentAuthors;
             $content->{dateGroups} = dclone $dateGroups;
-            $content->{genderGroups} = dclone $genderGroups;
+            $content->{dateGroupsByGender} = dclone $dateGroupsByGender;
+            $content->{genderGroupsByTokens} = dclone $genderGroupsByTokens;
+            $content->{genderGroupsByAuthors} = dclone $genderGroupsByAuthors;
 
             push(@fileList, dclone $content);
             $fileTokenLen = ($content->{tokens} > $fileTokenLen) ? $content->{tokens} : $fileTokenLen;

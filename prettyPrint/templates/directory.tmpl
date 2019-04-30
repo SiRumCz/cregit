@@ -161,7 +161,7 @@
                       <div id="data-script" class="hidden">
                         var spanGroupData = [
                           <TMPL_LOOP dateGroups>
-                          {"timestamp": <TMPL_VAR timestamp>, "group": [
+                          {"timestamp": <TMPL_VAR timestamp>, "total_tokens": <TMPL_VAR total_tokens>, "group": [
                             <TMPL_LOOP group>
                               {"author_id": <TMPL_VAR author_id>, "token_count": <TMPL_VAR token_count>},
                             </TMPL_LOOP>
@@ -179,7 +179,7 @@
               <table class="stats-table expandable">
                 <thead>
                   <tr>
-                    <th>Author Name</th>
+                    <th>Author</th>
                     <th>Tokens</th>
                     <th>Token Proportion</th>
                   </tr>
@@ -257,7 +257,7 @@
                       <div id="data-script" class="hidden">
                         var spanGroupData = [
                           <TMPL_LOOP dateGroups>
-                          {"timestamp": <TMPL_VAR timestamp>, "group": [
+                          {"timestamp": <TMPL_VAR timestamp>, "total_tokens": <TMPL_VAR total_tokens>, "group": [
                             <TMPL_LOOP group>
                               {"author_id": <TMPL_VAR author_id>, "token_count": <TMPL_VAR token_count>},
                             </TMPL_LOOP>
@@ -275,7 +275,7 @@
               <table class="stats-table expandable">
                 <thead>
                   <tr>
-                    <th>Author Name</th>
+                    <th>Author</th>
                     <th>Tokens</th>
                     <th>Token Proportion</th>
                   </tr>
