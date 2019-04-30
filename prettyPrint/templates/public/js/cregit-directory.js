@@ -575,7 +575,7 @@ $(document).ready(function() {
 
 	function StatsGraph_Click() {
 		var contentGraph = $(this);
-		contentDetail = contentGraph.parents(".content-list").next(".constent-stats-table-wrapper");
+		var contentDetail = contentGraph.parents(".content-list").next(".constent-stats-table-wrapper");
 		contentDetail.slideToggle(400, RenderMinimap);
 	}
 

@@ -23,7 +23,6 @@ $(document).ready(function() {
     var $dateSliderRange = $("#date-slider-range");
     var $statsGraphButton = $("button.content-stats-graph");
     var $tokenAuthorToggle = $("#token-author-toggle");
-    var $graphTableData = $(".graph-table-data");
     var $expandableTables = $("table.expandable");
     var $genderGroupsByTokens = $(".gender-by-tokens");
     var $genderGroupsByAuthors = $(".gender-by-authors");
@@ -128,6 +127,9 @@ $(document).ready(function() {
         var totalTokens = stats[0];
         var totalAuthors = stats[1];
         var spanGroup;
+
+        $(this).parents("tr").find(".author-count-column").text(totalAuthors);
+        $(this).parents("tr").find(".token-count-column").text(totalTokens);
 
         if ($tokenAuthorToggle.hasClass("token-toggle")) {
             // token distribution
@@ -426,7 +428,7 @@ $(document).ready(function() {
 
     function StatsGraph_Click() {
         var contentGraph = $(this);
-        contentDetail = contentGraph.parents(".content-list").next(".constent-stats-table-wrapper");
+        var contentDetail = contentGraph.parents(".content-list").next(".constent-stats-table-wrapper");
         contentDetail.slideToggle(400, RenderMinimap);
     }
 
@@ -443,6 +445,8 @@ $(document).ready(function() {
         }
 
         $(this).toggleClass("token-toggle author-toggle");
+
+        UpdateHighlight();
         RenderMinimap();
     }
 

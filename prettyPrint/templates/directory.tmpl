@@ -123,14 +123,15 @@
           <table id="content-list-header" class="content-list">
             <thead>
               <tr>
-                <th>Name</th>
-                <th>Lines</th>
-                <th>Files</th>
-                <th>Authors</th>
-                <th>Tokens</th>
+                <th><span title="Name">Name</span></th>
+                <th><span title="Lines">Lines</span></th>
+                <th><span title="Files">Files</span></th>
+                <th><span title="Subdirs">Subdirs</span></th>
+                <th><span title="Authors">Authors</span></th>
+                <th><span title="Tokens">Tokens</span></th>
                 <th>
                 <button id="abs-prop-toggle" class="toggle-btn" title="click to see the absolute scale for each content">change scale</button> &nbsp;
-                Color Graph By Token Proportion</th>
+                <span title="Color Graph By Token Proportion">Color Graph By Token Proportion</div></th>
               </tr>
             </thead>
           </table>
@@ -147,6 +148,9 @@
                   </td>
                   <td>
                     <TMPL_VAR file_counts>
+                  </td>
+                  <td>
+                    <TMPL_VAR subdir_counts>
                   </td>
                   <td>
                     <TMPL_VAR author_counts>
@@ -219,14 +223,16 @@
             <table id="content-list-header" class="content-list">
             <thead>
               <tr>
-                <th>Name</th>
-                <th>Lines</th>
-                <th>Files</th>
-                <th>Authors</th>
-                <th>Tokens</th>
+                <th><span title="Name">Name</span></th>
+                <th><span title="Lines">Lines</span></th>
+                <th><span title="Files">Files</span></th>
+                <th><span title="Subdirs">Subdirs</span></th>
+                <th><span title="Authors">Authors</span></th>
+                <th><span title="Tokens">Tokens</span></th>
                 <th>
-                <button id="abs-prop-toggle" class="toggle-btn">change scale</button> &nbsp;
-                Color Graph By Token Proportion</th>
+                <button id="abs-prop-toggle" class="toggle-btn" title="click to see the absolute scale for each content">change scale</button> &nbsp;
+                <span title="Color Graph By Token Proportion">Color Graph By Token Proportion</span>
+                </th>
               </tr>
             </thead>
           </table>
@@ -243,6 +249,9 @@
                   </td>
                   <td>
                     <TMPL_VAR file_counts>
+                  </td>
+                  <td>
+                    <TMPL_VAR subdir_counts>
                   </td>
                   <td>
                     <TMPL_VAR author_counts>

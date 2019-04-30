@@ -136,7 +136,7 @@ sub print_single_dir {
             my $dateGroups = PrettyPrintDirView::get_content_dategroup($contentRelativePath, 'd');
             my $dateGroupsByGender = PrettyPrintDirView::get_content_dategroup_gender_view($contentRelativePath, 'd');
             my ($genderGroupsByTokens, $genderGroupsByAuthors) = PrettyPrintDirView::get_content_gendergroup($contentRelativePath, 'd');
-            my ($fileCount, $lineCount) = get_file_and_line_counts($dirSourcePath);
+            my ($fileCount, $lineCount, $subdirCount) = get_file_and_line_counts($dirSourcePath);
 
             $content = content_object($currContent);
             $content->{tokens} = $contentStats->{tokens};
@@ -147,6 +147,7 @@ sub print_single_dir {
             $content->{dateGroupsByGender} = dclone $dateGroupsByGender;
             $content->{line_counts} = $lineCount;
             $content->{file_counts} = $fileCount;
+            $content->{subdir_counts} = $subdirCount;
             $content->{genderGroupsByTokens} = dclone $genderGroupsByTokens;
             $content->{genderGroupsByAuthors} = dclone $genderGroupsByAuthors;
 
@@ -173,6 +174,7 @@ sub print_single_dir {
             $content->{author_counts} = $contentStats->{author_counts};
             $content->{line_counts} = $fileLines;
             $content->{file_counts} = '-';
+            $content->{subdir_counts} = '-';
             $content->{url} = "./".basename($contentPath);
             $content->{authors} = dclone $contentAuthors;
             $content->{dateGroups} = dclone $dateGroups;
@@ -261,8 +263,9 @@ sub get_file_and_line_counts {
     my $dirSourcePath = shift @_;
     my $fileCount = `find $dirSourcePath -regex \"$findRegex\" | wc -l `+0;
     my $lineCount = `find $dirSourcePath -regex \"$findRegex\" -exec cat {} + | wc -l`+0;
+    my $subdirCount = `find $dirSourcePath -type d | wc -l`-1;
 
-    return ($fileCount, $lineCount);
+    return ($fileCount, $lineCount, $subdirCount);
 }
 
 sub print_directory {

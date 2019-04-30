@@ -454,11 +454,14 @@ button {
 .content-list > thead > tr > th {
 	width: 10%;
 	text-align: right;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+	overflow: hidden;
+	vertical-align: bottom;
 }
 
 /* Name */
 .content-list > thead > tr > th:first-child {
-	width: 15%;
 	text-align: left;
 }
 
@@ -467,9 +470,14 @@ button {
 	width: 7%;
 }
 
-/* Authors */
+/* Subdirs */
 .content-list > thead > tr > th:nth-child(4) {
-	width: 8%;
+	width: 6%;
+}
+
+/* Authors */
+.content-list > thead > tr > th:nth-child(5) {
+	width: 7%;
 }
 
 /* Color Graph */
@@ -477,24 +485,37 @@ button {
 	width: 50%;
 }
 
+/* Lines and Tokens */
 .content-list > tbody > tr >td {
 	width: 10%;
 	text-align: right;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+	overflow: hidden;
+	vertical-align: bottom;
 }
 
+/* Name */
 .content-list > tbody > tr > td:first-child {
-	width: 15%;
 	text-align: left;
 }
 
+/* Files */
 .content-list > tbody > tr > td:nth-child(3) {
 	width: 7%;
 }
 
+/* Subdirs */
 .content-list > tbody > tr > td:nth-child(4) {
-	width: 8%;
+	width: 6%;
 }
 
+/* Authors */
+.content-list > tbody > tr > td:nth-child(5) {
+	width: 7%;
+}
+
+/* Color Graph */
 .content-list > tbody > tr > td:last-child {
 	width: 50%;
 }

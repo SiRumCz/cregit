@@ -78,7 +78,7 @@
                     <TMPL_LOOP contributors>
                       <tr class="contributor-row">
                         <td><div class="gender-label gender-<TMPL_VAR gender>"><TMPL_VAR gender></div></td>
-                        <td><TMPL_VAR authors></td>
+                        <td><TMPL_VAR ESCAPE=HTML authors></td>
                         <td><TMPL_VAR files></td>
                         <td><TMPL_VAR tokens></td>
                         <td><TMPL_VAR token_percent></td>
@@ -110,14 +110,15 @@
           <table id="content-list-header" class="content-list">
             <thead>
               <tr>
-                <th>Name</th>
-                <th>Lines</th>
-                <th>Files</th>
-                <th>Authors</th>
-                <th>Tokens</th>
+                <th><span title="Name">Name</span></th>
+                <th><span title="Lines">Lines</span></th>
+                <th><span title="Files">Files</span></th>
+                <th><span title="Subdirs">Subdirs</span></th>
+                <th><span title="Authors">Authors</span></th>
+                <th><span title="Tokens">Tokens</span></th>
                 <th>
                 <button id="token-author-toggle" class="toggle-btn token-toggle" title="click to switch ratios between tokens and authors">tokens</button> &nbsp;
-                Contribution Ratio Color Graph</th>
+                <span title="Gender Ratio Color Graph">Gender Ratio Color Graph</span></th>
               </tr>
             </thead>
           </table>
@@ -136,10 +137,13 @@
                     <TMPL_VAR file_counts>
                   </td>
                   <td>
-                    <TMPL_VAR author_counts>
+                    <TMPL_VAR subdir_counts>
                   </td>
                   <td>
-                    <TMPL_VAR tokens>
+                    <span class="author-count-column"><TMPL_VAR author_counts></span>
+                  </td>
+                  <td>
+                    <span class="token-count-column"><TMPL_VAR tokens></span>
                   </td>
                   <td class="graph-table-data">
                     <button class="content-stats-graph" style="width: 100%;">
@@ -150,7 +154,7 @@
                           <TMPL_LOOP dateGroupsByGender>
                           {"timestamp": <TMPL_VAR timestamp>, "total_tokens": <TMPL_VAR total_tokens>, "group": [
                             <TMPL_LOOP group>
-                            {"gender": "<TMPL_VAR gender>", "author_id": "<TMPL_VAR author_id>", "token_count": <TMPL_VAR token_count>},
+                            {"gender": "<TMPL_VAR gender>", "author_id": "<TMPL_VAR ESCAPE=HTML author_id>", "token_count": <TMPL_VAR token_count>},
                             </TMPL_LOOP>
                             ]},
                           </TMPL_LOOP>
@@ -209,14 +213,15 @@
             <table id="content-list-header" class="content-list">
             <thead>
               <tr>
-                <th>Name</th>
-                <th>Lines</th>
-                <th>Files</th>
-                <th>Authors</th>
-                <th>Tokens</th>
+                <th><span title="Name">Name</span></th>
+                <th><span title="Lines">Lines</span></th>
+                <th><span title="Files">Files</span></th>
+                <th><span title="Subdirs">Subdirs</span></th>
+                <th><span title="Authors">Authors</span></th>
+                <th><span title="Tokens">Tokens</span></th>
                 <th>
                 <button id="token-author-toggle" class="toggle-btn token-toggle" title="click to switch ratios between tokens and authors">tokens</button> &nbsp;
-                Contribution Ratio Color Graph</th>
+                <span title="Gender Ratio Color Graph">Gender Ratio Color Graph</span></th>
               </tr>
             </thead>
           </table>
@@ -226,7 +231,7 @@
               <tbody>
                 <tr>
                   <td>
-                    <a class="content-name" href="<TMPL_VAR url>" title="<TMPL_VAR name>"><TMPL_VAR name></a>
+                    <a class="content-name" href="<TMPL_VAR url>" title="<TMPL_VAR ESCAPE=HTML name>"><TMPL_VAR ESCAPE=HTML name></a>
                   </td>
                   <td>
                     <TMPL_VAR line_counts>
@@ -235,10 +240,13 @@
                     <TMPL_VAR file_counts>
                   </td>
                   <td>
-                    <TMPL_VAR author_counts>
+                    <TMPL_VAR subdir_counts>
                   </td>
                   <td>
-                    <TMPL_VAR tokens>
+                    <span class="author-count-column"><TMPL_VAR author_counts></span>
+                  </td>
+                  <td>
+                    <span class="token-count-column"><TMPL_VAR tokens></span>
                   </td>
                   <td class="graph-table-data">
                     <button class="content-stats-graph file-list" style="width: 100%;">
@@ -249,7 +257,7 @@
                           <TMPL_LOOP dateGroupsByGender>
                           {"timestamp": <TMPL_VAR timestamp>, "total_tokens": <TMPL_VAR total_tokens>, "group": [
                             <TMPL_LOOP group>
-                            {"gender": "<TMPL_VAR gender>", "author_id": "<TMPL_VAR author_id>", "token_count": <TMPL_VAR token_count>},
+                            {"gender": "<TMPL_VAR gender>", "author_id": "<TMPL_VAR ESCAPE=HTML author_id>", "token_count": <TMPL_VAR token_count>},
                             </TMPL_LOOP>
                             ]},
                           </TMPL_LOOP>
@@ -316,7 +324,7 @@
                   <TMPL_LOOP contributors>
                     <tr class="contributor-row">
                       <td><div class="gender-label gender-<TMPL_VAR gender>"><TMPL_VAR gender></div></td>
-                      <td><TMPL_VAR authors></td>
+                      <td><TMPL_VAR ESCAPE=HTML authors></td>
                       <td><TMPL_VAR files></td>
                       <td><TMPL_VAR tokens></td>
                       <td><TMPL_VAR token_percent></td>
