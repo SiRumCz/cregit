@@ -91,32 +91,31 @@ $(document).ready(function() {
 
             const authorSet = new Set();
 
-            var authorCounts = 0;
             var tokenCounts = 0;
             matchedGroup.forEach(function(dateGroup) {
                 tokenCounts += dateGroup.total_tokens;
-                authorCounts += dateGroup.total_authors;
+                authorSet.add(dateGroup.author_id);
             });
 
-            return [tokenCounts, authorCounts];
+            return [tokenCounts, authorSet.size];
         }
 
         function getGenderSpanStats(jquery) {
             authorGender = jquery.data("gender");
 
             var tokenCount = 0;
-            var authorCount = 0;
+            const authorSet = new Set();
             var matchedGroup = spanGroupData.filter(groupMatch);
             matchedGroup.forEach(function (dateGroup) {
                 dateGroup.group.forEach(function(genderStats) {
                     if (genderStats.gender === authorGender) {
                         tokenCount += genderStats.token_count;
-                        authorCount += genderStats.author_count;
+                        authorSet.add(genderStats.author_id);
                     }
                 });
             });
 
-            return [tokenCount, authorCount];
+            return [tokenCount, authorSet.size];
         }
 
         var dataScript = $(this).children("#data-script");
@@ -261,7 +260,7 @@ $(document).ready(function() {
 
         // Pad up to 6 rows using the longest name for visual stability.
         while (rows.length < Math.min(6, $rows.length))
-            rows.push($("<tr class='contributor-row'><td>&nbsp</td><td/><td/><td/><td/><td/></tr>").get(0));
+            rows.push($("<tr class='contributor-row'><td>&nbsp;</td><td/><td/><td/><td/><td/><td/></tr>").get(0));
 
         $rows.detach(); // Detach before empty so rows don't get deleted
         $contributor_row_container.children("tr.contributor-row").empty();
