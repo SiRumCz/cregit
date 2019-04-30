@@ -94,7 +94,7 @@ $(document).ready(function() {
             var tokenCounts = 0;
             matchedGroup.forEach(function(dateGroup) {
                 tokenCounts += dateGroup.total_tokens;
-                authorSet.add(dateGroup.author_id);
+                dateGroup.group.forEach(genders => authorSet.add(genders.author_id));
             });
 
             return [tokenCounts, authorSet.size];
