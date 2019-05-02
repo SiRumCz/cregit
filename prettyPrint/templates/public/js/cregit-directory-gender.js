@@ -24,6 +24,7 @@ $(document).ready(function() {
     var $statsGraphButton = $("button.content-stats-graph");
     var $tokenAuthorToggle = $("#token-author-toggle");
     var $expandableTables = $("table.expandable");
+    var $statsTableExpandableButton = $("button.expand-collapse-table-btn");
     var $genderGroupsByTokens = $(".gender-by-tokens");
     var $genderGroupsByAuthors = $(".gender-by-authors");
     var $contentListHeader = $("#content-list-header");
@@ -450,6 +451,29 @@ $(document).ready(function() {
         RenderMinimap();
     }
 
+    function BindExpandButton() {
+        $statsTableExpandableButton = $("button.expand-collapse-table-btn");
+
+        $statsTableExpandableButton.click(function() {
+            var isExpandBtn = $(this).hasClass("expand");
+            if (isExpandBtn) {
+                $(this).parents("tr").siblings(".hidden").each(function() {
+                    $(this).removeClass("hidden");
+                });
+                $(this).html("click to collapse&#x25b2;");
+            } else {
+                $(this).parents("tbody").children("tr.contributor-row").each(function(i){
+                    if (20 > i) { return; }
+
+                    $(this).addClass("hidden");
+                });
+                $(this).html("click to expand&#x25bc;");
+            }
+            $(this).toggleClass("expand collapse");
+            RenderMinimap();
+        });
+    }
+
     $statsGraphButton.click(StatsGraph_Click);
 
     $tokenAuthorToggle.click(TokenAuthorToggle_Click);
@@ -462,6 +486,8 @@ $(document).ready(function() {
     $expandableTables.each(function() {
         CollapseTables($(this), 20);
     });
+
+    BindExpandButton();
 
     $contributor_headers.click(ColumnHeader_Click);
 
